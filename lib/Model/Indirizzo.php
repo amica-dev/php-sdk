@@ -1,0 +1,1073 @@
+<?php
+/**
+ * Indirizzo
+ *
+ * PHP version 7.4
+ *
+ * @category Class
+ * @package  Amica\Sdk
+ * @author   OpenAPI Generator team
+ * @link     https://openapi-generator.tech
+ */
+
+/**
+ * Customers API
+ *
+ * La Customers API fornisce accesso programmatico a tutti i dati aziendali gestiti da [Amica 20](https://gestionaleamica.com). Supporta il ciclo completo di documenti, fatture, magazzino, contabilità e anagrafiche. Per guide e documentazione completa, visitare [amica.dev](https://amica.dev/).  ## Autenticazione  Tutte le richieste API richiedono un token OAuth 2.0 Bearer valido, da includere nell'header `Authorization`:  ``` Authorization: Bearer <token> ```  ### Registra la tua app  Per integrare la Customers API registra la tua applicazione sull'**App Store di Amica**. Al termine della registrazione ottieni una coppia di credenziali OAuth 2.0 — `client_id` e `client_secret` (il secret è mostrato **una sola volta**) — e scegli gli **scope** e il **flusso di autenticazione** desiderati.  ### Scegli il flusso  - **Authorization Code con PKCE** (consigliato per app che operano per conto di un utente Amica): l'utente autorizza la tua app tramite la pagina di consenso dell'identity provider; la tua app riceve un `code` da scambiare con un access token.    ```   GET  {identity-provider}/connect/authorize?response_type=code&client_id=<client_id>&redirect_uri=<redirect_uri>&scope=openid%20read%20write%20documenti&code_challenge=<challenge>&code_challenge_method=S256   POST {identity-provider}/connect/token        grant_type=authorization_code&code=<code>&code_verifier=<verifier>&client_id=<client_id>&client_secret=<client_secret>&redirect_uri=<redirect_uri>   ```  - **Client Credentials** (per integrazioni server-to-server, senza utente interattivo):    ```   POST {identity-provider}/connect/token   Content-Type: application/x-www-form-urlencoded    grant_type=client_credentials&client_id=<client_id>&client_secret=<client_secret>&scope=read write documenti contabilita   ```    > **Nota:** il flusso Client Credentials è disponibile solo per le **app private**, non per quelle pubblicate sul marketplace.  In entrambi i casi la risposta contiene l'`access_token` (JWT con `aud: amica-cloud`) da usare nelle chiamate successive finché non scade (`expires_in`), dopodiché va richiesto un nuovo token. Ogni token contiene uno o più **scope** che determinano le aree accessibili (vedi sotto). Dalla [API Reference](https://amica.dev) è possibile incollare un access token per provare gli endpoint direttamente dal browser.  ## Scope di autorizzazione  L'accesso agli endpoint è governato dagli scope presenti nel token OAuth:  | Scope | Descrizione | |-------|-------------| | `comune` | Anagrafiche: contatti, indirizzi, nazioni, valute, modalità di pagamento, ecc. | | `magazzino` | Magazzino: articoli, listini, movimenti di magazzino, giacenze, distinte base. | | `contabilita` | Contabilità: registrazioni contabili, scadenze, castelletti IVA, fatture elettroniche XML. | | `documenti` | Documenti: fatture, note di credito, DDT, ordini, preventivi, proforma ed emissione. |  Una richiesta verso un endpoint non coperto dallo scope del token riceverà una risposta `403 Forbidden`.  ## Company ID  La maggior parte degli endpoint è relativa a una specifica azienda e segue il pattern:  ``` /api/v3/{companyId}/risorsa ```  Il `companyId` è l'identificativo univoco di ciascun database aziendale. Usare l'endpoint `GET /api/v3/config/Azienda` per ottenere l'elenco delle aziende disponibili.  ## Paginazione  Gli endpoint che restituiscono liste supportano la paginazione tramite query parameter:  | Parametro | Descrizione | |-----------|-------------| | `Skip` | Numero di elementi da saltare dall'inizio del set di risultati. | | `Take` | Numero di elementi da includere nella risposta. |  La risposta include due header:  | Header | Descrizione | |--------|-------------| | `X-Read-TotalCount` | Numero totale di elementi che soddisfano il filtro corrente. | | `X-Read-Count` | Numero di elementi effettivamente restituiti nel body della risposta. |  ## Ordinamento e filtri  Gli endpoint lista accettano parametri aggiuntivi:  | Parametro | Descrizione | |-----------|-------------| | `Order` | Lista di proprietà per l'ordinamento, separate da virgola. Un segno meno (`-`) prima del nome indica ordine discendente. Es. `-RagioneSociale1,Citta`. | | `Filter` | Condizioni di ricerca: lista di espressioni separate da virgola, ciascuna formata da nome campo, operatore, valore ed eventuale connettore logico. Operatori: `$eq`, `$ne`, `$gt`, `$lt`, `$lte`, `$gte`, `$ct` (contiene), `$nct`, `$sw` (inizia con), `$ew` (finisce con). Connettori: `$and` (default, omissibile) e `$or`; le sotto-query si racchiudono tra `[]`. Es. `RagioneSociale1 $ct acme $or, Fido $gt 1000`. | | `SkipTotalCount` | Se `true`, l'header `X-Read-TotalCount` viene omesso dalla risposta: migliori prestazioni a scapito del conteggio totale. Default `false`. |  ## Espansione oggetti correlati  Gli endpoint singoli e lista supportano il parametro `Expand`. Quando fornito, gli oggetti correlati vengono inclusi inline nella risposta anziché restituiti come riferimenti. È possibile specificare espansioni multiple separate da virgola.  ## Gestione errori  L'API usa codici di stato HTTP standard e restituisce [RFC 7807](https://tools.ietf.org/html/rfc7807) Problem Details in caso di errore:  | Codice | Significato | |--------|-------------| | `400` | Bad Request — validazione fallita o parametro obbligatorio mancante. | | `401` | Unauthorized — token mancante o scaduto. | | `403` | Forbidden — il token non possiede lo scope richiesto. | | `404` | Not Found — la risorsa richiesta non esiste. | | `409` | Conflict — conflitto di concorrenza. | | `422` | Unprocessable Entity — entità non processabile (es. token di concorrenza obsoleto). |  Alcune risposte `400` includono un campo `overridable` che indica se l'errore di validazione può essere ignorato impostando il parametro `validationOverride` a `true`.  ## Controllo della concorrenza  Le entità contengono una proprietà `ConcurrencyToken`. Quando si aggiorna un'entità tramite `PUT`, il token nel body della richiesta viene confrontato con il valore memorizzato. Se differiscono, viene restituito un `422 Unprocessable Entity`. Usare sempre l'ultimo token ricevuto da una risposta `GET` o `POST`.
+ *
+ * The version of the OpenAPI document: v3
+ * Contact: assistenza@gestionaleamica.com
+ * Generated by: https://openapi-generator.tech
+ * Generator version: 7.11.0
+ */
+
+/**
+ * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
+ * https://openapi-generator.tech
+ * Do not edit the class manually.
+ */
+
+namespace Amica\Sdk\Model;
+
+use \ArrayAccess;
+use \Amica\Sdk\ObjectSerializer;
+
+/**
+ * Indirizzo Class Doc Comment
+ *
+ * @category Class
+ * @description Indirizzo.
+ * @package  Amica\Sdk
+ * @author   OpenAPI Generator team
+ * @link     https://openapi-generator.tech
+ * @implements \ArrayAccess<string, mixed>
+ */
+class Indirizzo implements ModelInterface, ArrayAccess, \JsonSerializable
+{
+    public const DISCRIMINATOR = null;
+
+    /**
+      * The original name of the model.
+      *
+      * @var string
+      */
+    protected static $openAPIModelName = 'Indirizzo';
+
+    /**
+      * Array of property to type mappings. Used for (de)serialization
+      *
+      * @var string[]
+      */
+    protected static $openAPITypes = [
+        'id' => 'int',
+        'concurrency_token' => 'int',
+        'anagrafica_id' => 'int',
+        'ragione_sociale1' => 'string',
+        'ragione_sociale2' => 'string',
+        'via' => 'string',
+        'localit' => 'string',
+        'cap' => 'string',
+        'provincia' => 'string',
+        'telefono1' => 'string',
+        'telefono2' => 'string',
+        'fax' => 'string',
+        'email' => 'string',
+        'stato' => 'bool'
+    ];
+
+    /**
+      * Array of property to format mappings. Used for (de)serialization
+      *
+      * @var string[]
+      * @phpstan-var array<string, string|null>
+      * @psalm-var array<string, string|null>
+      */
+    protected static $openAPIFormats = [
+        'id' => 'int32',
+        'concurrency_token' => 'int32',
+        'anagrafica_id' => 'int32',
+        'ragione_sociale1' => null,
+        'ragione_sociale2' => null,
+        'via' => null,
+        'localit' => null,
+        'cap' => null,
+        'provincia' => null,
+        'telefono1' => null,
+        'telefono2' => null,
+        'fax' => null,
+        'email' => null,
+        'stato' => null
+    ];
+
+    /**
+      * Array of nullable properties. Used for (de)serialization
+      *
+      * @var boolean[]
+      */
+    protected static array $openAPINullables = [
+        'id' => false,
+        'concurrency_token' => false,
+        'anagrafica_id' => false,
+        'ragione_sociale1' => true,
+        'ragione_sociale2' => true,
+        'via' => true,
+        'localit' => true,
+        'cap' => true,
+        'provincia' => true,
+        'telefono1' => true,
+        'telefono2' => true,
+        'fax' => true,
+        'email' => true,
+        'stato' => false
+    ];
+
+    /**
+      * If a nullable field gets set to null, insert it here
+      *
+      * @var boolean[]
+      */
+    protected array $openAPINullablesSetToNull = [];
+
+    /**
+     * Array of property to type mappings. Used for (de)serialization
+     *
+     * @return array
+     */
+    public static function openAPITypes()
+    {
+        return self::$openAPITypes;
+    }
+
+    /**
+     * Array of property to format mappings. Used for (de)serialization
+     *
+     * @return array
+     */
+    public static function openAPIFormats()
+    {
+        return self::$openAPIFormats;
+    }
+
+    /**
+     * Array of nullable properties
+     *
+     * @return array
+     */
+    protected static function openAPINullables(): array
+    {
+        return self::$openAPINullables;
+    }
+
+    /**
+     * Array of nullable field names deliberately set to null
+     *
+     * @return boolean[]
+     */
+    private function getOpenAPINullablesSetToNull(): array
+    {
+        return $this->openAPINullablesSetToNull;
+    }
+
+    /**
+     * Setter - Array of nullable field names deliberately set to null
+     *
+     * @param boolean[] $openAPINullablesSetToNull
+     */
+    private function setOpenAPINullablesSetToNull(array $openAPINullablesSetToNull): void
+    {
+        $this->openAPINullablesSetToNull = $openAPINullablesSetToNull;
+    }
+
+    /**
+     * Checks if a property is nullable
+     *
+     * @param string $property
+     * @return bool
+     */
+    public static function isNullable(string $property): bool
+    {
+        return self::openAPINullables()[$property] ?? false;
+    }
+
+    /**
+     * Checks if a nullable property is set to null.
+     *
+     * @param string $property
+     * @return bool
+     */
+    public function isNullableSetToNull(string $property): bool
+    {
+        return in_array($property, $this->getOpenAPINullablesSetToNull(), true);
+    }
+
+    /**
+     * Array of attributes where the key is the local name,
+     * and the value is the original name
+     *
+     * @var string[]
+     */
+    protected static $attributeMap = [
+        'id' => 'id',
+        'concurrency_token' => 'concurrencyToken',
+        'anagrafica_id' => 'anagraficaId',
+        'ragione_sociale1' => 'ragioneSociale1',
+        'ragione_sociale2' => 'ragioneSociale2',
+        'via' => 'via',
+        'localit' => 'località',
+        'cap' => 'cap',
+        'provincia' => 'provincia',
+        'telefono1' => 'telefono1',
+        'telefono2' => 'telefono2',
+        'fax' => 'fax',
+        'email' => 'email',
+        'stato' => 'stato'
+    ];
+
+    /**
+     * Array of attributes to setter functions (for deserialization of responses)
+     *
+     * @var string[]
+     */
+    protected static $setters = [
+        'id' => 'setId',
+        'concurrency_token' => 'setConcurrencyToken',
+        'anagrafica_id' => 'setAnagraficaId',
+        'ragione_sociale1' => 'setRagioneSociale1',
+        'ragione_sociale2' => 'setRagioneSociale2',
+        'via' => 'setVia',
+        'localit' => 'setLocalit',
+        'cap' => 'setCap',
+        'provincia' => 'setProvincia',
+        'telefono1' => 'setTelefono1',
+        'telefono2' => 'setTelefono2',
+        'fax' => 'setFax',
+        'email' => 'setEmail',
+        'stato' => 'setStato'
+    ];
+
+    /**
+     * Array of attributes to getter functions (for serialization of requests)
+     *
+     * @var string[]
+     */
+    protected static $getters = [
+        'id' => 'getId',
+        'concurrency_token' => 'getConcurrencyToken',
+        'anagrafica_id' => 'getAnagraficaId',
+        'ragione_sociale1' => 'getRagioneSociale1',
+        'ragione_sociale2' => 'getRagioneSociale2',
+        'via' => 'getVia',
+        'localit' => 'getLocalit',
+        'cap' => 'getCap',
+        'provincia' => 'getProvincia',
+        'telefono1' => 'getTelefono1',
+        'telefono2' => 'getTelefono2',
+        'fax' => 'getFax',
+        'email' => 'getEmail',
+        'stato' => 'getStato'
+    ];
+
+    /**
+     * Array of attributes where the key is the local name,
+     * and the value is the original name
+     *
+     * @return array
+     */
+    public static function attributeMap()
+    {
+        return self::$attributeMap;
+    }
+
+    /**
+     * Array of attributes to setter functions (for deserialization of responses)
+     *
+     * @return array
+     */
+    public static function setters()
+    {
+        return self::$setters;
+    }
+
+    /**
+     * Array of attributes to getter functions (for serialization of requests)
+     *
+     * @return array
+     */
+    public static function getters()
+    {
+        return self::$getters;
+    }
+
+    /**
+     * The original name of the model.
+     *
+     * @return string
+     */
+    public function getModelName()
+    {
+        return self::$openAPIModelName;
+    }
+
+
+    /**
+     * Associative array for storing property values
+     *
+     * @var mixed[]
+     */
+    protected $container = [];
+
+    /**
+     * Constructor
+     *
+     * @param mixed[]|null $data Associated array of property values
+     *                      initializing the model
+     */
+    public function __construct(?array $data = null)
+    {
+        $this->setIfExists('id', $data ?? [], null);
+        $this->setIfExists('concurrency_token', $data ?? [], null);
+        $this->setIfExists('anagrafica_id', $data ?? [], null);
+        $this->setIfExists('ragione_sociale1', $data ?? [], null);
+        $this->setIfExists('ragione_sociale2', $data ?? [], null);
+        $this->setIfExists('via', $data ?? [], null);
+        $this->setIfExists('localit', $data ?? [], null);
+        $this->setIfExists('cap', $data ?? [], null);
+        $this->setIfExists('provincia', $data ?? [], null);
+        $this->setIfExists('telefono1', $data ?? [], null);
+        $this->setIfExists('telefono2', $data ?? [], null);
+        $this->setIfExists('fax', $data ?? [], null);
+        $this->setIfExists('email', $data ?? [], null);
+        $this->setIfExists('stato', $data ?? [], null);
+    }
+
+    /**
+    * Sets $this->container[$variableName] to the given data or to the given default Value; if $variableName
+    * is nullable and its value is set to null in the $fields array, then mark it as "set to null" in the
+    * $this->openAPINullablesSetToNull array
+    *
+    * @param string $variableName
+    * @param array  $fields
+    * @param mixed  $defaultValue
+    */
+    private function setIfExists(string $variableName, array $fields, $defaultValue): void
+    {
+        if (self::isNullable($variableName) && array_key_exists($variableName, $fields) && is_null($fields[$variableName])) {
+            $this->openAPINullablesSetToNull[] = $variableName;
+        }
+
+        $this->container[$variableName] = $fields[$variableName] ?? $defaultValue;
+    }
+
+    /**
+     * Show all the invalid properties with reasons.
+     *
+     * @return array invalid properties with reasons
+     */
+    public function listInvalidProperties()
+    {
+        $invalidProperties = [];
+
+        if (!is_null($this->container['ragione_sociale1']) && (mb_strlen($this->container['ragione_sociale1']) > 60)) {
+            $invalidProperties[] = "invalid value for 'ragione_sociale1', the character length must be smaller than or equal to 60.";
+        }
+
+        if (!is_null($this->container['ragione_sociale1']) && (mb_strlen($this->container['ragione_sociale1']) < 0)) {
+            $invalidProperties[] = "invalid value for 'ragione_sociale1', the character length must be bigger than or equal to 0.";
+        }
+
+        if (!is_null($this->container['ragione_sociale2']) && (mb_strlen($this->container['ragione_sociale2']) > 60)) {
+            $invalidProperties[] = "invalid value for 'ragione_sociale2', the character length must be smaller than or equal to 60.";
+        }
+
+        if (!is_null($this->container['ragione_sociale2']) && (mb_strlen($this->container['ragione_sociale2']) < 0)) {
+            $invalidProperties[] = "invalid value for 'ragione_sociale2', the character length must be bigger than or equal to 0.";
+        }
+
+        if (!is_null($this->container['via']) && (mb_strlen($this->container['via']) > 60)) {
+            $invalidProperties[] = "invalid value for 'via', the character length must be smaller than or equal to 60.";
+        }
+
+        if (!is_null($this->container['via']) && (mb_strlen($this->container['via']) < 0)) {
+            $invalidProperties[] = "invalid value for 'via', the character length must be bigger than or equal to 0.";
+        }
+
+        if (!is_null($this->container['localit']) && (mb_strlen($this->container['localit']) > 40)) {
+            $invalidProperties[] = "invalid value for 'localit', the character length must be smaller than or equal to 40.";
+        }
+
+        if (!is_null($this->container['localit']) && (mb_strlen($this->container['localit']) < 0)) {
+            $invalidProperties[] = "invalid value for 'localit', the character length must be bigger than or equal to 0.";
+        }
+
+        if (!is_null($this->container['cap']) && (mb_strlen($this->container['cap']) > 8)) {
+            $invalidProperties[] = "invalid value for 'cap', the character length must be smaller than or equal to 8.";
+        }
+
+        if (!is_null($this->container['cap']) && (mb_strlen($this->container['cap']) < 0)) {
+            $invalidProperties[] = "invalid value for 'cap', the character length must be bigger than or equal to 0.";
+        }
+
+        if (!is_null($this->container['provincia']) && (mb_strlen($this->container['provincia']) > 3)) {
+            $invalidProperties[] = "invalid value for 'provincia', the character length must be smaller than or equal to 3.";
+        }
+
+        if (!is_null($this->container['provincia']) && (mb_strlen($this->container['provincia']) < 0)) {
+            $invalidProperties[] = "invalid value for 'provincia', the character length must be bigger than or equal to 0.";
+        }
+
+        if (!is_null($this->container['telefono1']) && (mb_strlen($this->container['telefono1']) > 25)) {
+            $invalidProperties[] = "invalid value for 'telefono1', the character length must be smaller than or equal to 25.";
+        }
+
+        if (!is_null($this->container['telefono1']) && (mb_strlen($this->container['telefono1']) < 0)) {
+            $invalidProperties[] = "invalid value for 'telefono1', the character length must be bigger than or equal to 0.";
+        }
+
+        if (!is_null($this->container['telefono2']) && (mb_strlen($this->container['telefono2']) > 25)) {
+            $invalidProperties[] = "invalid value for 'telefono2', the character length must be smaller than or equal to 25.";
+        }
+
+        if (!is_null($this->container['telefono2']) && (mb_strlen($this->container['telefono2']) < 0)) {
+            $invalidProperties[] = "invalid value for 'telefono2', the character length must be bigger than or equal to 0.";
+        }
+
+        if (!is_null($this->container['fax']) && (mb_strlen($this->container['fax']) > 25)) {
+            $invalidProperties[] = "invalid value for 'fax', the character length must be smaller than or equal to 25.";
+        }
+
+        if (!is_null($this->container['fax']) && (mb_strlen($this->container['fax']) < 0)) {
+            $invalidProperties[] = "invalid value for 'fax', the character length must be bigger than or equal to 0.";
+        }
+
+        if (!is_null($this->container['email']) && (mb_strlen($this->container['email']) > 25)) {
+            $invalidProperties[] = "invalid value for 'email', the character length must be smaller than or equal to 25.";
+        }
+
+        if (!is_null($this->container['email']) && (mb_strlen($this->container['email']) < 0)) {
+            $invalidProperties[] = "invalid value for 'email', the character length must be bigger than or equal to 0.";
+        }
+
+        return $invalidProperties;
+    }
+
+    /**
+     * Validate all the properties in the model
+     * return true if all passed
+     *
+     * @return bool True if all properties are valid
+     */
+    public function valid()
+    {
+        return count($this->listInvalidProperties()) === 0;
+    }
+
+
+    /**
+     * Gets id
+     *
+     * @return int|null
+     */
+    public function getId()
+    {
+        return $this->container['id'];
+    }
+
+    /**
+     * Sets id
+     *
+     * @param int|null $id Identificativo univoco.
+     *
+     * @return self
+     */
+    public function setId($id)
+    {
+        if (is_null($id)) {
+            throw new \InvalidArgumentException('non-nullable id cannot be null');
+        }
+        $this->container['id'] = $id;
+
+        return $this;
+    }
+
+    /**
+     * Gets concurrency_token
+     *
+     * @return int|null
+     */
+    public function getConcurrencyToken()
+    {
+        return $this->container['concurrency_token'];
+    }
+
+    /**
+     * Sets concurrency_token
+     *
+     * @param int|null $concurrency_token Il token di concorrenza implementa il controllo di concorrenza ottimistica: a ogni operazione di aggiornamento o cancellazione il valore del token sul database viene confrontato con quello sull'entità. Se i valori coincidono, l'operazione viene eseguita; se differiscono, si assume che un altro utente abbia effettuato una scrittura nel frattempo e l'aggiornamento viene rifiutato.
+     *
+     * @return self
+     */
+    public function setConcurrencyToken($concurrency_token)
+    {
+        if (is_null($concurrency_token)) {
+            throw new \InvalidArgumentException('non-nullable concurrency_token cannot be null');
+        }
+        $this->container['concurrency_token'] = $concurrency_token;
+
+        return $this;
+    }
+
+    /**
+     * Gets anagrafica_id
+     *
+     * @return int|null
+     */
+    public function getAnagraficaId()
+    {
+        return $this->container['anagrafica_id'];
+    }
+
+    /**
+     * Sets anagrafica_id
+     *
+     * @param int|null $anagrafica_id Identificativo univoco di Amica.Anagrafica.
+     *
+     * @return self
+     */
+    public function setAnagraficaId($anagrafica_id)
+    {
+        if (is_null($anagrafica_id)) {
+            throw new \InvalidArgumentException('non-nullable anagrafica_id cannot be null');
+        }
+        $this->container['anagrafica_id'] = $anagrafica_id;
+
+        return $this;
+    }
+
+    /**
+     * Gets ragione_sociale1
+     *
+     * @return string|null
+     */
+    public function getRagioneSociale1()
+    {
+        return $this->container['ragione_sociale1'];
+    }
+
+    /**
+     * Sets ragione_sociale1
+     *
+     * @param string|null $ragione_sociale1 Ragione sociale, oppure nome e cognome della persona fisica.
+     *
+     * @return self
+     */
+    public function setRagioneSociale1($ragione_sociale1)
+    {
+        if (is_null($ragione_sociale1)) {
+            array_push($this->openAPINullablesSetToNull, 'ragione_sociale1');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('ragione_sociale1', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($ragione_sociale1) && (mb_strlen($ragione_sociale1) > 60)) {
+            throw new \InvalidArgumentException('invalid length for $ragione_sociale1 when calling Indirizzo., must be smaller than or equal to 60.');
+        }
+        if (!is_null($ragione_sociale1) && (mb_strlen($ragione_sociale1) < 0)) {
+            throw new \InvalidArgumentException('invalid length for $ragione_sociale1 when calling Indirizzo., must be bigger than or equal to 0.');
+        }
+
+        $this->container['ragione_sociale1'] = $ragione_sociale1;
+
+        return $this;
+    }
+
+    /**
+     * Gets ragione_sociale2
+     *
+     * @return string|null
+     */
+    public function getRagioneSociale2()
+    {
+        return $this->container['ragione_sociale2'];
+    }
+
+    /**
+     * Sets ragione_sociale2
+     *
+     * @param string|null $ragione_sociale2 Eventuale seconda riga della ragione sociale.
+     *
+     * @return self
+     */
+    public function setRagioneSociale2($ragione_sociale2)
+    {
+        if (is_null($ragione_sociale2)) {
+            array_push($this->openAPINullablesSetToNull, 'ragione_sociale2');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('ragione_sociale2', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($ragione_sociale2) && (mb_strlen($ragione_sociale2) > 60)) {
+            throw new \InvalidArgumentException('invalid length for $ragione_sociale2 when calling Indirizzo., must be smaller than or equal to 60.');
+        }
+        if (!is_null($ragione_sociale2) && (mb_strlen($ragione_sociale2) < 0)) {
+            throw new \InvalidArgumentException('invalid length for $ragione_sociale2 when calling Indirizzo., must be bigger than or equal to 0.');
+        }
+
+        $this->container['ragione_sociale2'] = $ragione_sociale2;
+
+        return $this;
+    }
+
+    /**
+     * Gets via
+     *
+     * @return string|null
+     */
+    public function getVia()
+    {
+        return $this->container['via'];
+    }
+
+    /**
+     * Sets via
+     *
+     * @param string|null $via Indirizzo (via).
+     *
+     * @return self
+     */
+    public function setVia($via)
+    {
+        if (is_null($via)) {
+            array_push($this->openAPINullablesSetToNull, 'via');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('via', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($via) && (mb_strlen($via) > 60)) {
+            throw new \InvalidArgumentException('invalid length for $via when calling Indirizzo., must be smaller than or equal to 60.');
+        }
+        if (!is_null($via) && (mb_strlen($via) < 0)) {
+            throw new \InvalidArgumentException('invalid length for $via when calling Indirizzo., must be bigger than or equal to 0.');
+        }
+
+        $this->container['via'] = $via;
+
+        return $this;
+    }
+
+    /**
+     * Gets localit
+     *
+     * @return string|null
+     */
+    public function getLocalit()
+    {
+        return $this->container['localit'];
+    }
+
+    /**
+     * Sets localit
+     *
+     * @param string|null $localit Località.
+     *
+     * @return self
+     */
+    public function setLocalit($localit)
+    {
+        if (is_null($localit)) {
+            array_push($this->openAPINullablesSetToNull, 'localit');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('localit', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($localit) && (mb_strlen($localit) > 40)) {
+            throw new \InvalidArgumentException('invalid length for $localit when calling Indirizzo., must be smaller than or equal to 40.');
+        }
+        if (!is_null($localit) && (mb_strlen($localit) < 0)) {
+            throw new \InvalidArgumentException('invalid length for $localit when calling Indirizzo., must be bigger than or equal to 0.');
+        }
+
+        $this->container['localit'] = $localit;
+
+        return $this;
+    }
+
+    /**
+     * Gets cap
+     *
+     * @return string|null
+     */
+    public function getCap()
+    {
+        return $this->container['cap'];
+    }
+
+    /**
+     * Sets cap
+     *
+     * @param string|null $cap CAP o codice di avviamento postale.
+     *
+     * @return self
+     */
+    public function setCap($cap)
+    {
+        if (is_null($cap)) {
+            array_push($this->openAPINullablesSetToNull, 'cap');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('cap', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($cap) && (mb_strlen($cap) > 8)) {
+            throw new \InvalidArgumentException('invalid length for $cap when calling Indirizzo., must be smaller than or equal to 8.');
+        }
+        if (!is_null($cap) && (mb_strlen($cap) < 0)) {
+            throw new \InvalidArgumentException('invalid length for $cap when calling Indirizzo., must be bigger than or equal to 0.');
+        }
+
+        $this->container['cap'] = $cap;
+
+        return $this;
+    }
+
+    /**
+     * Gets provincia
+     *
+     * @return string|null
+     */
+    public function getProvincia()
+    {
+        return $this->container['provincia'];
+    }
+
+    /**
+     * Sets provincia
+     *
+     * @param string|null $provincia Provincia, contea o nome dell'area.
+     *
+     * @return self
+     */
+    public function setProvincia($provincia)
+    {
+        if (is_null($provincia)) {
+            array_push($this->openAPINullablesSetToNull, 'provincia');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('provincia', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($provincia) && (mb_strlen($provincia) > 3)) {
+            throw new \InvalidArgumentException('invalid length for $provincia when calling Indirizzo., must be smaller than or equal to 3.');
+        }
+        if (!is_null($provincia) && (mb_strlen($provincia) < 0)) {
+            throw new \InvalidArgumentException('invalid length for $provincia when calling Indirizzo., must be bigger than or equal to 0.');
+        }
+
+        $this->container['provincia'] = $provincia;
+
+        return $this;
+    }
+
+    /**
+     * Gets telefono1
+     *
+     * @return string|null
+     */
+    public function getTelefono1()
+    {
+        return $this->container['telefono1'];
+    }
+
+    /**
+     * Sets telefono1
+     *
+     * @param string|null $telefono1 Numero di telefono principale.
+     *
+     * @return self
+     */
+    public function setTelefono1($telefono1)
+    {
+        if (is_null($telefono1)) {
+            array_push($this->openAPINullablesSetToNull, 'telefono1');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('telefono1', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($telefono1) && (mb_strlen($telefono1) > 25)) {
+            throw new \InvalidArgumentException('invalid length for $telefono1 when calling Indirizzo., must be smaller than or equal to 25.');
+        }
+        if (!is_null($telefono1) && (mb_strlen($telefono1) < 0)) {
+            throw new \InvalidArgumentException('invalid length for $telefono1 when calling Indirizzo., must be bigger than or equal to 0.');
+        }
+
+        $this->container['telefono1'] = $telefono1;
+
+        return $this;
+    }
+
+    /**
+     * Gets telefono2
+     *
+     * @return string|null
+     */
+    public function getTelefono2()
+    {
+        return $this->container['telefono2'];
+    }
+
+    /**
+     * Sets telefono2
+     *
+     * @param string|null $telefono2 Numero di telefono secondario.
+     *
+     * @return self
+     */
+    public function setTelefono2($telefono2)
+    {
+        if (is_null($telefono2)) {
+            array_push($this->openAPINullablesSetToNull, 'telefono2');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('telefono2', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($telefono2) && (mb_strlen($telefono2) > 25)) {
+            throw new \InvalidArgumentException('invalid length for $telefono2 when calling Indirizzo., must be smaller than or equal to 25.');
+        }
+        if (!is_null($telefono2) && (mb_strlen($telefono2) < 0)) {
+            throw new \InvalidArgumentException('invalid length for $telefono2 when calling Indirizzo., must be bigger than or equal to 0.');
+        }
+
+        $this->container['telefono2'] = $telefono2;
+
+        return $this;
+    }
+
+    /**
+     * Gets fax
+     *
+     * @return string|null
+     */
+    public function getFax()
+    {
+        return $this->container['fax'];
+    }
+
+    /**
+     * Sets fax
+     *
+     * @param string|null $fax Numero di fax.
+     *
+     * @return self
+     */
+    public function setFax($fax)
+    {
+        if (is_null($fax)) {
+            array_push($this->openAPINullablesSetToNull, 'fax');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('fax', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($fax) && (mb_strlen($fax) > 25)) {
+            throw new \InvalidArgumentException('invalid length for $fax when calling Indirizzo., must be smaller than or equal to 25.');
+        }
+        if (!is_null($fax) && (mb_strlen($fax) < 0)) {
+            throw new \InvalidArgumentException('invalid length for $fax when calling Indirizzo., must be bigger than or equal to 0.');
+        }
+
+        $this->container['fax'] = $fax;
+
+        return $this;
+    }
+
+    /**
+     * Gets email
+     *
+     * @return string|null
+     */
+    public function getEmail()
+    {
+        return $this->container['email'];
+    }
+
+    /**
+     * Sets email
+     *
+     * @param string|null $email Indirizzo email.
+     *
+     * @return self
+     */
+    public function setEmail($email)
+    {
+        if (is_null($email)) {
+            array_push($this->openAPINullablesSetToNull, 'email');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('email', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($email) && (mb_strlen($email) > 25)) {
+            throw new \InvalidArgumentException('invalid length for $email when calling Indirizzo., must be smaller than or equal to 25.');
+        }
+        if (!is_null($email) && (mb_strlen($email) < 0)) {
+            throw new \InvalidArgumentException('invalid length for $email when calling Indirizzo., must be bigger than or equal to 0.');
+        }
+
+        $this->container['email'] = $email;
+
+        return $this;
+    }
+
+    /**
+     * Gets stato
+     *
+     * @return bool|null
+     */
+    public function getStato()
+    {
+        return $this->container['stato'];
+    }
+
+    /**
+     * Sets stato
+     *
+     * @param bool|null $stato Indica se l'indirizzo è attivo oppure no.
+     *
+     * @return self
+     */
+    public function setStato($stato)
+    {
+        if (is_null($stato)) {
+            throw new \InvalidArgumentException('non-nullable stato cannot be null');
+        }
+        $this->container['stato'] = $stato;
+
+        return $this;
+    }
+    /**
+     * Returns true if offset exists. False otherwise.
+     *
+     * @param integer $offset Offset
+     *
+     * @return boolean
+     */
+    public function offsetExists($offset): bool
+    {
+        return isset($this->container[$offset]);
+    }
+
+    /**
+     * Gets offset.
+     *
+     * @param integer $offset Offset
+     *
+     * @return mixed|null
+     */
+    #[\ReturnTypeWillChange]
+    public function offsetGet($offset)
+    {
+        return $this->container[$offset] ?? null;
+    }
+
+    /**
+     * Sets value based on offset.
+     *
+     * @param int|null $offset Offset
+     * @param mixed    $value  Value to be set
+     *
+     * @return void
+     */
+    public function offsetSet($offset, $value): void
+    {
+        if (is_null($offset)) {
+            $this->container[] = $value;
+        } else {
+            $this->container[$offset] = $value;
+        }
+    }
+
+    /**
+     * Unsets offset.
+     *
+     * @param integer $offset Offset
+     *
+     * @return void
+     */
+    public function offsetUnset($offset): void
+    {
+        unset($this->container[$offset]);
+    }
+
+    /**
+     * Serializes the object to a value that can be serialized natively by json_encode().
+     * @link https://www.php.net/manual/en/jsonserializable.jsonserialize.php
+     *
+     * @return mixed Returns data which can be serialized by json_encode(), which is a value
+     * of any type other than a resource.
+     */
+    #[\ReturnTypeWillChange]
+    public function jsonSerialize()
+    {
+       return ObjectSerializer::sanitizeForSerialization($this);
+    }
+
+    /**
+     * Gets the string presentation of the object
+     *
+     * @return string
+     */
+    public function __toString()
+    {
+        return json_encode(
+            ObjectSerializer::sanitizeForSerialization($this),
+            JSON_PRETTY_PRINT
+        );
+    }
+
+    /**
+     * Gets a header-safe presentation of the object
+     *
+     * @return string
+     */
+    public function toHeaderValue()
+    {
+        return json_encode(ObjectSerializer::sanitizeForSerialization($this));
+    }
+}
+
+

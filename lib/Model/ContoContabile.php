@@ -1,0 +1,841 @@
+<?php
+/**
+ * ContoContabile
+ *
+ * PHP version 7.4
+ *
+ * @category Class
+ * @package  Amica\Sdk
+ * @author   OpenAPI Generator team
+ * @link     https://openapi-generator.tech
+ */
+
+/**
+ * Customers API
+ *
+ * La Customers API fornisce accesso programmatico a tutti i dati aziendali gestiti da [Amica 20](https://gestionaleamica.com). Supporta il ciclo completo di documenti, fatture, magazzino, contabilità e anagrafiche. Per guide e documentazione completa, visitare [amica.dev](https://amica.dev/).  ## Autenticazione  Tutte le richieste API richiedono un token OAuth 2.0 Bearer valido, da includere nell'header `Authorization`:  ``` Authorization: Bearer <token> ```  ### Registra la tua app  Per integrare la Customers API registra la tua applicazione sull'**App Store di Amica**. Al termine della registrazione ottieni una coppia di credenziali OAuth 2.0 — `client_id` e `client_secret` (il secret è mostrato **una sola volta**) — e scegli gli **scope** e il **flusso di autenticazione** desiderati.  ### Scegli il flusso  - **Authorization Code con PKCE** (consigliato per app che operano per conto di un utente Amica): l'utente autorizza la tua app tramite la pagina di consenso dell'identity provider; la tua app riceve un `code` da scambiare con un access token.    ```   GET  {identity-provider}/connect/authorize?response_type=code&client_id=<client_id>&redirect_uri=<redirect_uri>&scope=openid%20read%20write%20documenti&code_challenge=<challenge>&code_challenge_method=S256   POST {identity-provider}/connect/token        grant_type=authorization_code&code=<code>&code_verifier=<verifier>&client_id=<client_id>&client_secret=<client_secret>&redirect_uri=<redirect_uri>   ```  - **Client Credentials** (per integrazioni server-to-server, senza utente interattivo):    ```   POST {identity-provider}/connect/token   Content-Type: application/x-www-form-urlencoded    grant_type=client_credentials&client_id=<client_id>&client_secret=<client_secret>&scope=read write documenti contabilita   ```    > **Nota:** il flusso Client Credentials è disponibile solo per le **app private**, non per quelle pubblicate sul marketplace.  In entrambi i casi la risposta contiene l'`access_token` (JWT con `aud: amica-cloud`) da usare nelle chiamate successive finché non scade (`expires_in`), dopodiché va richiesto un nuovo token. Ogni token contiene uno o più **scope** che determinano le aree accessibili (vedi sotto). Dalla [API Reference](https://amica.dev) è possibile incollare un access token per provare gli endpoint direttamente dal browser.  ## Scope di autorizzazione  L'accesso agli endpoint è governato dagli scope presenti nel token OAuth:  | Scope | Descrizione | |-------|-------------| | `comune` | Anagrafiche: contatti, indirizzi, nazioni, valute, modalità di pagamento, ecc. | | `magazzino` | Magazzino: articoli, listini, movimenti di magazzino, giacenze, distinte base. | | `contabilita` | Contabilità: registrazioni contabili, scadenze, castelletti IVA, fatture elettroniche XML. | | `documenti` | Documenti: fatture, note di credito, DDT, ordini, preventivi, proforma ed emissione. |  Una richiesta verso un endpoint non coperto dallo scope del token riceverà una risposta `403 Forbidden`.  ## Company ID  La maggior parte degli endpoint è relativa a una specifica azienda e segue il pattern:  ``` /api/v3/{companyId}/risorsa ```  Il `companyId` è l'identificativo univoco di ciascun database aziendale. Usare l'endpoint `GET /api/v3/config/Azienda` per ottenere l'elenco delle aziende disponibili.  ## Paginazione  Gli endpoint che restituiscono liste supportano la paginazione tramite query parameter:  | Parametro | Descrizione | |-----------|-------------| | `Skip` | Numero di elementi da saltare dall'inizio del set di risultati. | | `Take` | Numero di elementi da includere nella risposta. |  La risposta include due header:  | Header | Descrizione | |--------|-------------| | `X-Read-TotalCount` | Numero totale di elementi che soddisfano il filtro corrente. | | `X-Read-Count` | Numero di elementi effettivamente restituiti nel body della risposta. |  ## Ordinamento e filtri  Gli endpoint lista accettano parametri aggiuntivi:  | Parametro | Descrizione | |-----------|-------------| | `Order` | Lista di proprietà per l'ordinamento, separate da virgola. Un segno meno (`-`) prima del nome indica ordine discendente. Es. `-RagioneSociale1,Citta`. | | `Filter` | Condizioni di ricerca: lista di espressioni separate da virgola, ciascuna formata da nome campo, operatore, valore ed eventuale connettore logico. Operatori: `$eq`, `$ne`, `$gt`, `$lt`, `$lte`, `$gte`, `$ct` (contiene), `$nct`, `$sw` (inizia con), `$ew` (finisce con). Connettori: `$and` (default, omissibile) e `$or`; le sotto-query si racchiudono tra `[]`. Es. `RagioneSociale1 $ct acme $or, Fido $gt 1000`. | | `SkipTotalCount` | Se `true`, l'header `X-Read-TotalCount` viene omesso dalla risposta: migliori prestazioni a scapito del conteggio totale. Default `false`. |  ## Espansione oggetti correlati  Gli endpoint singoli e lista supportano il parametro `Expand`. Quando fornito, gli oggetti correlati vengono inclusi inline nella risposta anziché restituiti come riferimenti. È possibile specificare espansioni multiple separate da virgola.  ## Gestione errori  L'API usa codici di stato HTTP standard e restituisce [RFC 7807](https://tools.ietf.org/html/rfc7807) Problem Details in caso di errore:  | Codice | Significato | |--------|-------------| | `400` | Bad Request — validazione fallita o parametro obbligatorio mancante. | | `401` | Unauthorized — token mancante o scaduto. | | `403` | Forbidden — il token non possiede lo scope richiesto. | | `404` | Not Found — la risorsa richiesta non esiste. | | `409` | Conflict — conflitto di concorrenza. | | `422` | Unprocessable Entity — entità non processabile (es. token di concorrenza obsoleto). |  Alcune risposte `400` includono un campo `overridable` che indica se l'errore di validazione può essere ignorato impostando il parametro `validationOverride` a `true`.  ## Controllo della concorrenza  Le entità contengono una proprietà `ConcurrencyToken`. Quando si aggiorna un'entità tramite `PUT`, il token nel body della richiesta viene confrontato con il valore memorizzato. Se differiscono, viene restituito un `422 Unprocessable Entity`. Usare sempre l'ultimo token ricevuto da una risposta `GET` o `POST`.
+ *
+ * The version of the OpenAPI document: v3
+ * Contact: assistenza@gestionaleamica.com
+ * Generated by: https://openapi-generator.tech
+ * Generator version: 7.11.0
+ */
+
+/**
+ * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
+ * https://openapi-generator.tech
+ * Do not edit the class manually.
+ */
+
+namespace Amica\Sdk\Model;
+
+use \ArrayAccess;
+use \Amica\Sdk\ObjectSerializer;
+
+/**
+ * ContoContabile Class Doc Comment
+ *
+ * @category Class
+ * @description Conto contabile.
+ * @package  Amica\Sdk
+ * @author   OpenAPI Generator team
+ * @link     https://openapi-generator.tech
+ * @implements \ArrayAccess<string, mixed>
+ */
+class ContoContabile implements ModelInterface, ArrayAccess, \JsonSerializable
+{
+    public const DISCRIMINATOR = null;
+
+    /**
+      * The original name of the model.
+      *
+      * @var string
+      */
+    protected static $openAPIModelName = 'ContoContabile';
+
+    /**
+      * Array of property to type mappings. Used for (de)serialization
+      *
+      * @var string[]
+      */
+    protected static $openAPITypes = [
+        'id' => 'int',
+        'concurrency_token' => 'int',
+        'banca_id' => 'int',
+        'sezione' => 'string',
+        'tipo' => 'string',
+        'raw' => 'string',
+        'sottoconto' => 'string',
+        'descrizione' => 'string',
+        'conto' => 'string'
+    ];
+
+    /**
+      * Array of property to format mappings. Used for (de)serialization
+      *
+      * @var string[]
+      * @phpstan-var array<string, string|null>
+      * @psalm-var array<string, string|null>
+      */
+    protected static $openAPIFormats = [
+        'id' => 'int32',
+        'concurrency_token' => 'int32',
+        'banca_id' => 'int32',
+        'sezione' => null,
+        'tipo' => null,
+        'raw' => null,
+        'sottoconto' => null,
+        'descrizione' => null,
+        'conto' => null
+    ];
+
+    /**
+      * Array of nullable properties. Used for (de)serialization
+      *
+      * @var boolean[]
+      */
+    protected static array $openAPINullables = [
+        'id' => false,
+        'concurrency_token' => false,
+        'banca_id' => true,
+        'sezione' => false,
+        'tipo' => false,
+        'raw' => true,
+        'sottoconto' => true,
+        'descrizione' => true,
+        'conto' => true
+    ];
+
+    /**
+      * If a nullable field gets set to null, insert it here
+      *
+      * @var boolean[]
+      */
+    protected array $openAPINullablesSetToNull = [];
+
+    /**
+     * Array of property to type mappings. Used for (de)serialization
+     *
+     * @return array
+     */
+    public static function openAPITypes()
+    {
+        return self::$openAPITypes;
+    }
+
+    /**
+     * Array of property to format mappings. Used for (de)serialization
+     *
+     * @return array
+     */
+    public static function openAPIFormats()
+    {
+        return self::$openAPIFormats;
+    }
+
+    /**
+     * Array of nullable properties
+     *
+     * @return array
+     */
+    protected static function openAPINullables(): array
+    {
+        return self::$openAPINullables;
+    }
+
+    /**
+     * Array of nullable field names deliberately set to null
+     *
+     * @return boolean[]
+     */
+    private function getOpenAPINullablesSetToNull(): array
+    {
+        return $this->openAPINullablesSetToNull;
+    }
+
+    /**
+     * Setter - Array of nullable field names deliberately set to null
+     *
+     * @param boolean[] $openAPINullablesSetToNull
+     */
+    private function setOpenAPINullablesSetToNull(array $openAPINullablesSetToNull): void
+    {
+        $this->openAPINullablesSetToNull = $openAPINullablesSetToNull;
+    }
+
+    /**
+     * Checks if a property is nullable
+     *
+     * @param string $property
+     * @return bool
+     */
+    public static function isNullable(string $property): bool
+    {
+        return self::openAPINullables()[$property] ?? false;
+    }
+
+    /**
+     * Checks if a nullable property is set to null.
+     *
+     * @param string $property
+     * @return bool
+     */
+    public function isNullableSetToNull(string $property): bool
+    {
+        return in_array($property, $this->getOpenAPINullablesSetToNull(), true);
+    }
+
+    /**
+     * Array of attributes where the key is the local name,
+     * and the value is the original name
+     *
+     * @var string[]
+     */
+    protected static $attributeMap = [
+        'id' => 'id',
+        'concurrency_token' => 'concurrencyToken',
+        'banca_id' => 'bancaId',
+        'sezione' => 'sezione',
+        'tipo' => 'tipo',
+        'raw' => 'raw',
+        'sottoconto' => 'sottoconto',
+        'descrizione' => 'descrizione',
+        'conto' => 'conto'
+    ];
+
+    /**
+     * Array of attributes to setter functions (for deserialization of responses)
+     *
+     * @var string[]
+     */
+    protected static $setters = [
+        'id' => 'setId',
+        'concurrency_token' => 'setConcurrencyToken',
+        'banca_id' => 'setBancaId',
+        'sezione' => 'setSezione',
+        'tipo' => 'setTipo',
+        'raw' => 'setRaw',
+        'sottoconto' => 'setSottoconto',
+        'descrizione' => 'setDescrizione',
+        'conto' => 'setConto'
+    ];
+
+    /**
+     * Array of attributes to getter functions (for serialization of requests)
+     *
+     * @var string[]
+     */
+    protected static $getters = [
+        'id' => 'getId',
+        'concurrency_token' => 'getConcurrencyToken',
+        'banca_id' => 'getBancaId',
+        'sezione' => 'getSezione',
+        'tipo' => 'getTipo',
+        'raw' => 'getRaw',
+        'sottoconto' => 'getSottoconto',
+        'descrizione' => 'getDescrizione',
+        'conto' => 'getConto'
+    ];
+
+    /**
+     * Array of attributes where the key is the local name,
+     * and the value is the original name
+     *
+     * @return array
+     */
+    public static function attributeMap()
+    {
+        return self::$attributeMap;
+    }
+
+    /**
+     * Array of attributes to setter functions (for deserialization of responses)
+     *
+     * @return array
+     */
+    public static function setters()
+    {
+        return self::$setters;
+    }
+
+    /**
+     * Array of attributes to getter functions (for serialization of requests)
+     *
+     * @return array
+     */
+    public static function getters()
+    {
+        return self::$getters;
+    }
+
+    /**
+     * The original name of the model.
+     *
+     * @return string
+     */
+    public function getModelName()
+    {
+        return self::$openAPIModelName;
+    }
+
+    public const SEZIONE_ATTIVIT = 'Attività';
+    public const SEZIONE_PASSIVIT = 'Passività';
+    public const SEZIONE_COSTI = 'Costi';
+    public const SEZIONE_RICAVI = 'Ricavi';
+    public const SEZIONE_ORDINE = 'Ordine';
+    public const TIPO_CONTABILE = 'Contabile';
+    public const TIPO_PARTITARIO_CLIENTI = 'PartitarioClienti';
+    public const TIPO_PARTITARIO_FORNITORI = 'PartitarioFornitori';
+    public const TIPO_BANCARIO = 'Bancario';
+
+    /**
+     * Gets allowable values of the enum
+     *
+     * @return string[]
+     */
+    public function getSezioneAllowableValues()
+    {
+        return [
+            self::SEZIONE_ATTIVIT,
+            self::SEZIONE_PASSIVIT,
+            self::SEZIONE_COSTI,
+            self::SEZIONE_RICAVI,
+            self::SEZIONE_ORDINE,
+        ];
+    }
+
+    /**
+     * Gets allowable values of the enum
+     *
+     * @return string[]
+     */
+    public function getTipoAllowableValues()
+    {
+        return [
+            self::TIPO_CONTABILE,
+            self::TIPO_PARTITARIO_CLIENTI,
+            self::TIPO_PARTITARIO_FORNITORI,
+            self::TIPO_BANCARIO,
+        ];
+    }
+
+    /**
+     * Associative array for storing property values
+     *
+     * @var mixed[]
+     */
+    protected $container = [];
+
+    /**
+     * Constructor
+     *
+     * @param mixed[]|null $data Associated array of property values
+     *                      initializing the model
+     */
+    public function __construct(?array $data = null)
+    {
+        $this->setIfExists('id', $data ?? [], null);
+        $this->setIfExists('concurrency_token', $data ?? [], null);
+        $this->setIfExists('banca_id', $data ?? [], null);
+        $this->setIfExists('sezione', $data ?? [], null);
+        $this->setIfExists('tipo', $data ?? [], null);
+        $this->setIfExists('raw', $data ?? [], null);
+        $this->setIfExists('sottoconto', $data ?? [], null);
+        $this->setIfExists('descrizione', $data ?? [], null);
+        $this->setIfExists('conto', $data ?? [], null);
+    }
+
+    /**
+    * Sets $this->container[$variableName] to the given data or to the given default Value; if $variableName
+    * is nullable and its value is set to null in the $fields array, then mark it as "set to null" in the
+    * $this->openAPINullablesSetToNull array
+    *
+    * @param string $variableName
+    * @param array  $fields
+    * @param mixed  $defaultValue
+    */
+    private function setIfExists(string $variableName, array $fields, $defaultValue): void
+    {
+        if (self::isNullable($variableName) && array_key_exists($variableName, $fields) && is_null($fields[$variableName])) {
+            $this->openAPINullablesSetToNull[] = $variableName;
+        }
+
+        $this->container[$variableName] = $fields[$variableName] ?? $defaultValue;
+    }
+
+    /**
+     * Show all the invalid properties with reasons.
+     *
+     * @return array invalid properties with reasons
+     */
+    public function listInvalidProperties()
+    {
+        $invalidProperties = [];
+
+        $allowedValues = $this->getSezioneAllowableValues();
+        if (!is_null($this->container['sezione']) && !in_array($this->container['sezione'], $allowedValues, true)) {
+            $invalidProperties[] = sprintf(
+                "invalid value '%s' for 'sezione', must be one of '%s'",
+                $this->container['sezione'],
+                implode("', '", $allowedValues)
+            );
+        }
+
+        $allowedValues = $this->getTipoAllowableValues();
+        if (!is_null($this->container['tipo']) && !in_array($this->container['tipo'], $allowedValues, true)) {
+            $invalidProperties[] = sprintf(
+                "invalid value '%s' for 'tipo', must be one of '%s'",
+                $this->container['tipo'],
+                implode("', '", $allowedValues)
+            );
+        }
+
+        if (!is_null($this->container['raw']) && (mb_strlen($this->container['raw']) > 25)) {
+            $invalidProperties[] = "invalid value for 'raw', the character length must be smaller than or equal to 25.";
+        }
+
+        if (!is_null($this->container['raw']) && (mb_strlen($this->container['raw']) < 0)) {
+            $invalidProperties[] = "invalid value for 'raw', the character length must be bigger than or equal to 0.";
+        }
+
+        if (!is_null($this->container['sottoconto']) && (mb_strlen($this->container['sottoconto']) > 5)) {
+            $invalidProperties[] = "invalid value for 'sottoconto', the character length must be smaller than or equal to 5.";
+        }
+
+        if (!is_null($this->container['sottoconto']) && (mb_strlen($this->container['sottoconto']) < 0)) {
+            $invalidProperties[] = "invalid value for 'sottoconto', the character length must be bigger than or equal to 0.";
+        }
+
+        if (!is_null($this->container['descrizione']) && (mb_strlen($this->container['descrizione']) > 80)) {
+            $invalidProperties[] = "invalid value for 'descrizione', the character length must be smaller than or equal to 80.";
+        }
+
+        if (!is_null($this->container['descrizione']) && (mb_strlen($this->container['descrizione']) < 0)) {
+            $invalidProperties[] = "invalid value for 'descrizione', the character length must be bigger than or equal to 0.";
+        }
+
+        return $invalidProperties;
+    }
+
+    /**
+     * Validate all the properties in the model
+     * return true if all passed
+     *
+     * @return bool True if all properties are valid
+     */
+    public function valid()
+    {
+        return count($this->listInvalidProperties()) === 0;
+    }
+
+
+    /**
+     * Gets id
+     *
+     * @return int|null
+     */
+    public function getId()
+    {
+        return $this->container['id'];
+    }
+
+    /**
+     * Sets id
+     *
+     * @param int|null $id Identificativo univoco.
+     *
+     * @return self
+     */
+    public function setId($id)
+    {
+        if (is_null($id)) {
+            throw new \InvalidArgumentException('non-nullable id cannot be null');
+        }
+        $this->container['id'] = $id;
+
+        return $this;
+    }
+
+    /**
+     * Gets concurrency_token
+     *
+     * @return int|null
+     */
+    public function getConcurrencyToken()
+    {
+        return $this->container['concurrency_token'];
+    }
+
+    /**
+     * Sets concurrency_token
+     *
+     * @param int|null $concurrency_token Il token di concorrenza implementa il controllo di concorrenza ottimistica: a ogni operazione di aggiornamento o cancellazione il valore del token sul database viene confrontato con quello sull'entità. Se i valori coincidono, l'operazione viene eseguita; se differiscono, si assume che un altro utente abbia effettuato una scrittura nel frattempo e l'aggiornamento viene rifiutato.
+     *
+     * @return self
+     */
+    public function setConcurrencyToken($concurrency_token)
+    {
+        if (is_null($concurrency_token)) {
+            throw new \InvalidArgumentException('non-nullable concurrency_token cannot be null');
+        }
+        $this->container['concurrency_token'] = $concurrency_token;
+
+        return $this;
+    }
+
+    /**
+     * Gets banca_id
+     *
+     * @return int|null
+     */
+    public function getBancaId()
+    {
+        return $this->container['banca_id'];
+    }
+
+    /**
+     * Sets banca_id
+     *
+     * @param int|null $banca_id Identificativo univoco di Amica.Banca.
+     *
+     * @return self
+     */
+    public function setBancaId($banca_id)
+    {
+        if (is_null($banca_id)) {
+            array_push($this->openAPINullablesSetToNull, 'banca_id');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('banca_id', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        $this->container['banca_id'] = $banca_id;
+
+        return $this;
+    }
+
+    /**
+     * Gets sezione
+     *
+     * @return string|null
+     */
+    public function getSezione()
+    {
+        return $this->container['sezione'];
+    }
+
+    /**
+     * Sets sezione
+     *
+     * @param string|null $sezione Sezione di bilancio.
+     *
+     * @return self
+     */
+    public function setSezione($sezione)
+    {
+        if (is_null($sezione)) {
+            throw new \InvalidArgumentException('non-nullable sezione cannot be null');
+        }
+        $allowedValues = $this->getSezioneAllowableValues();
+        if (!in_array($sezione, $allowedValues, true)) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    "Invalid value '%s' for 'sezione', must be one of '%s'",
+                    $sezione,
+                    implode("', '", $allowedValues)
+                )
+            );
+        }
+        $this->container['sezione'] = $sezione;
+
+        return $this;
+    }
+
+    /**
+     * Gets tipo
+     *
+     * @return string|null
+     */
+    public function getTipo()
+    {
+        return $this->container['tipo'];
+    }
+
+    /**
+     * Sets tipo
+     *
+     * @param string|null $tipo Tipo di conto.
+     *
+     * @return self
+     */
+    public function setTipo($tipo)
+    {
+        if (is_null($tipo)) {
+            throw new \InvalidArgumentException('non-nullable tipo cannot be null');
+        }
+        $allowedValues = $this->getTipoAllowableValues();
+        if (!in_array($tipo, $allowedValues, true)) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    "Invalid value '%s' for 'tipo', must be one of '%s'",
+                    $tipo,
+                    implode("', '", $allowedValues)
+                )
+            );
+        }
+        $this->container['tipo'] = $tipo;
+
+        return $this;
+    }
+
+    /**
+     * Gets raw
+     *
+     * @return string|null
+     */
+    public function getRaw()
+    {
+        return $this->container['raw'];
+    }
+
+    /**
+     * Sets raw
+     *
+     * @param string|null $raw Numero di conto, in formato grezzo. Sono supportati fino a cinque livelli, ciascuno espresso da un massimo di cinque caratteri allineati a destra e riempiti con spazi, ad es. \"  100   20\" (dieci caratteri in totale) esprime \"100.20\".
+     *
+     * @return self
+     */
+    public function setRaw($raw)
+    {
+        if (is_null($raw)) {
+            array_push($this->openAPINullablesSetToNull, 'raw');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('raw', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($raw) && (mb_strlen($raw) > 25)) {
+            throw new \InvalidArgumentException('invalid length for $raw when calling ContoContabile., must be smaller than or equal to 25.');
+        }
+        if (!is_null($raw) && (mb_strlen($raw) < 0)) {
+            throw new \InvalidArgumentException('invalid length for $raw when calling ContoContabile., must be bigger than or equal to 0.');
+        }
+
+        $this->container['raw'] = $raw;
+
+        return $this;
+    }
+
+    /**
+     * Gets sottoconto
+     *
+     * @return string|null
+     */
+    public function getSottoconto()
+    {
+        return $this->container['sottoconto'];
+    }
+
+    /**
+     * Sets sottoconto
+     *
+     * @param string|null $sottoconto Ultimo quintetto del numero di conto (sottoconto). Per \"100.20\", il valore sarebbe \"20\".
+     *
+     * @return self
+     */
+    public function setSottoconto($sottoconto)
+    {
+        if (is_null($sottoconto)) {
+            array_push($this->openAPINullablesSetToNull, 'sottoconto');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('sottoconto', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($sottoconto) && (mb_strlen($sottoconto) > 5)) {
+            throw new \InvalidArgumentException('invalid length for $sottoconto when calling ContoContabile., must be smaller than or equal to 5.');
+        }
+        if (!is_null($sottoconto) && (mb_strlen($sottoconto) < 0)) {
+            throw new \InvalidArgumentException('invalid length for $sottoconto when calling ContoContabile., must be bigger than or equal to 0.');
+        }
+
+        $this->container['sottoconto'] = $sottoconto;
+
+        return $this;
+    }
+
+    /**
+     * Gets descrizione
+     *
+     * @return string|null
+     */
+    public function getDescrizione()
+    {
+        return $this->container['descrizione'];
+    }
+
+    /**
+     * Sets descrizione
+     *
+     * @param string|null $descrizione Descrizione.
+     *
+     * @return self
+     */
+    public function setDescrizione($descrizione)
+    {
+        if (is_null($descrizione)) {
+            array_push($this->openAPINullablesSetToNull, 'descrizione');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('descrizione', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($descrizione) && (mb_strlen($descrizione) > 80)) {
+            throw new \InvalidArgumentException('invalid length for $descrizione when calling ContoContabile., must be smaller than or equal to 80.');
+        }
+        if (!is_null($descrizione) && (mb_strlen($descrizione) < 0)) {
+            throw new \InvalidArgumentException('invalid length for $descrizione when calling ContoContabile., must be bigger than or equal to 0.');
+        }
+
+        $this->container['descrizione'] = $descrizione;
+
+        return $this;
+    }
+
+    /**
+     * Gets conto
+     *
+     * @return string|null
+     */
+    public function getConto()
+    {
+        return $this->container['conto'];
+    }
+
+    /**
+     * Sets conto
+     *
+     * @param string|null $conto Numero di conto (ad es. \"100.20\"). Sono supportati fino a 5 livelli. Il valore è ricavato da Amica.ContoContabile.Raw.
+     *
+     * @return self
+     */
+    public function setConto($conto)
+    {
+        if (is_null($conto)) {
+            array_push($this->openAPINullablesSetToNull, 'conto');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('conto', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        $this->container['conto'] = $conto;
+
+        return $this;
+    }
+    /**
+     * Returns true if offset exists. False otherwise.
+     *
+     * @param integer $offset Offset
+     *
+     * @return boolean
+     */
+    public function offsetExists($offset): bool
+    {
+        return isset($this->container[$offset]);
+    }
+
+    /**
+     * Gets offset.
+     *
+     * @param integer $offset Offset
+     *
+     * @return mixed|null
+     */
+    #[\ReturnTypeWillChange]
+    public function offsetGet($offset)
+    {
+        return $this->container[$offset] ?? null;
+    }
+
+    /**
+     * Sets value based on offset.
+     *
+     * @param int|null $offset Offset
+     * @param mixed    $value  Value to be set
+     *
+     * @return void
+     */
+    public function offsetSet($offset, $value): void
+    {
+        if (is_null($offset)) {
+            $this->container[] = $value;
+        } else {
+            $this->container[$offset] = $value;
+        }
+    }
+
+    /**
+     * Unsets offset.
+     *
+     * @param integer $offset Offset
+     *
+     * @return void
+     */
+    public function offsetUnset($offset): void
+    {
+        unset($this->container[$offset]);
+    }
+
+    /**
+     * Serializes the object to a value that can be serialized natively by json_encode().
+     * @link https://www.php.net/manual/en/jsonserializable.jsonserialize.php
+     *
+     * @return mixed Returns data which can be serialized by json_encode(), which is a value
+     * of any type other than a resource.
+     */
+    #[\ReturnTypeWillChange]
+    public function jsonSerialize()
+    {
+       return ObjectSerializer::sanitizeForSerialization($this);
+    }
+
+    /**
+     * Gets the string presentation of the object
+     *
+     * @return string
+     */
+    public function __toString()
+    {
+        return json_encode(
+            ObjectSerializer::sanitizeForSerialization($this),
+            JSON_PRETTY_PRINT
+        );
+    }
+
+    /**
+     * Gets a header-safe presentation of the object
+     *
+     * @return string
+     */
+    public function toHeaderValue()
+    {
+        return json_encode(ObjectSerializer::sanitizeForSerialization($this));
+    }
+}
+
+

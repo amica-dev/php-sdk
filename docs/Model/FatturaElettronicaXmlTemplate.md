@@ -1,0 +1,48 @@
+# # FatturaElettronicaXmlTemplate
+
+## Properties
+
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**id** | **int** | Identificativo univoco. | [optional]
+**concurrency_token** | **int** | Il token di concorrenza implementa il controllo di concorrenza ottimistica: a ogni operazione di aggiornamento o cancellazione il valore del token sul database viene confrontato con quello sull&#39;entità. Se i valori coincidono, l&#39;operazione viene eseguita; se differiscono, si assume che un altro utente abbia effettuato una scrittura nel frattempo e l&#39;aggiornamento viene rifiutato. | [optional]
+**soggetto_emittente** | **string** |  | [optional]
+**id_trasmittente_id_paese** | **string** |  | [optional]
+**cedente_prestatore_id_paese** | **string** |  | [optional]
+**progressivo_invio** | **string** |  | [optional]
+**albo_professionale** | **string** |  | [optional]
+**provincia_albo** | **string** |  | [optional]
+**numero_iscrizione_albo** | **string** |  | [optional]
+**data_iscrizione_albo** | **\DateTime** |  | [optional]
+**regime_fiscale** | **string** |  | [optional]
+**sede_nazione** | **string** |  | [optional]
+**sede_numero_civico** | **string** |  | [optional]
+**stabile_organizzazione_indirizzo** | **string** |  | [optional]
+**stabile_organizzazione_numero_civico** | **string** |  | [optional]
+**stabile_organizzazione_cap** | **string** |  | [optional]
+**stabile_organizzazione_comune** | **string** |  | [optional]
+**stabile_organizzazione_provincia** | **string** |  | [optional]
+**stabile_organizzazione_nazione** | **string** |  | [optional]
+**rea_numero** | **string** |  | [optional]
+**rea_ufficio** | **string** |  | [optional]
+**rea_capitale_sociale** | **float** |  | [optional]
+**rea_socio_unico** | **string** |  | [optional]
+**rea_stato_liquidazione** | **string** |  | [optional]
+**rappresentante_id_paese** | **string** |  | [optional]
+**rappresentante_id_codice** | **string** |  | [optional]
+**rappresentante_codice_fiscale** | **string** |  | [optional]
+**rappresentante_denominazione** | **string** |  | [optional]
+**rappresentante_nome** | **string** |  | [optional]
+**rappresentante_cognome** | **string** |  | [optional]
+**rappresentante_titolo** | **string** |  | [optional]
+**rappresentante_cod_eori** | **string** |  | [optional]
+**intermediario_id_paese** | **string** |  | [optional]
+**intermediario_id_codice** | **string** |  | [optional]
+**intermediario_codice_fiscale** | **string** |  | [optional]
+**intermediario_denominazione** | **string** |  | [optional]
+**intermediario_nome** | **string** |  | [optional]
+**intermediario_cognome** | **string** |  | [optional]
+**intermediario_titolo** | **string** |  | [optional]
+**intermediario_cod_eori** | **string** |  | [optional]
+
+[[Back to Model list]](../../README.md#models) [[Back to API list]](../../README.md#endpoints) [[Back to README]](../../README.md)
