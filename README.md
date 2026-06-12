@@ -1,4 +1,4 @@
-# amica-sdk — SDK PHP per la Customers API di Amica
+# amica/php-sdk — SDK PHP per la Customers API di Amica
 
 La Customers API fornisce accesso programmatico a tutti i dati aziendali gestiti da [Amica 20](https://gestionaleamica.com). Supporta il ciclo completo di documenti, fatture, magazzino, contabilità e anagrafiche. Per guide e documentazione completa, visitare [amica.dev](https://amica.dev/).
 
@@ -115,8 +115,8 @@ Le entità contengono una proprietà `ConcurrencyToken`. Quando si aggiorna un'e
 Richiede PHP 7.4+ e [Composer](https://getcomposer.org/). Clona il repository e installa le dipendenze:
 
 ```bash
-git clone https://github.com/CIR2000/amica-php.git
-cd amica-php
+git clone https://github.com/amica-dev/php-sdk.git
+cd php-sdk
 composer install
 ```
 

@@ -22,7 +22,6 @@ docs/Api/ContoContabileApi.md
 docs/Api/DistintaBaseApi.md
 docs/Api/DocumentoApi.md
 docs/Api/DocumentoMediaFileApi.md
-docs/Api/EventoApi.md
 docs/Api/FatturaElettronicaXmlApi.md
 docs/Api/FatturaElettronicaXmlTemplateApi.md
 docs/Api/GiacenzaApi.md
@@ -52,7 +51,6 @@ docs/Api/SpesaApi.md
 docs/Api/SpesaDocumentoApi.md
 docs/Api/TagliaApi.md
 docs/Api/ValutaApi.md
-docs/Api/WebHookApi.md
 docs/Model/AllegatoDocumento.md
 docs/Model/Anagrafica.md
 docs/Model/AnagraficaNominativo1.md
@@ -95,7 +93,6 @@ docs/Model/DocumentoComputeResult.md
 docs/Model/DocumentoComputeResultRiepilogoIva.md
 docs/Model/DocumentoImportData.md
 docs/Model/DocumentoMediaFile.md
-docs/Model/Evento.md
 docs/Model/FatturaElettronicaExportOptions.md
 docs/Model/FatturaElettronicaExportResult.md
 docs/Model/FatturaElettronicaImportResult.md
@@ -147,7 +144,6 @@ docs/Model/Spesa.md
 docs/Model/SpesaDocumento.md
 docs/Model/Taglia.md
 docs/Model/Valuta.md
-docs/Model/WebHook.md
 git_push.sh
 lib/Api/AnagraficaApi.php
 lib/Api/AreaGeograficaApi.php
@@ -167,7 +163,6 @@ lib/Api/ContoContabileApi.php
 lib/Api/DistintaBaseApi.php
 lib/Api/DocumentoApi.php
 lib/Api/DocumentoMediaFileApi.php
-lib/Api/EventoApi.php
 lib/Api/FatturaElettronicaXmlApi.php
 lib/Api/FatturaElettronicaXmlTemplateApi.php
 lib/Api/GiacenzaApi.php
@@ -197,7 +192,6 @@ lib/Api/SpesaApi.php
 lib/Api/SpesaDocumentoApi.php
 lib/Api/TagliaApi.php
 lib/Api/ValutaApi.php
-lib/Api/WebHookApi.php
 lib/ApiException.php
 lib/Configuration.php
 lib/HeaderSelector.php
@@ -243,7 +237,6 @@ lib/Model/DocumentoComputeResult.php
 lib/Model/DocumentoComputeResultRiepilogoIva.php
 lib/Model/DocumentoImportData.php
 lib/Model/DocumentoMediaFile.php
-lib/Model/Evento.php
 lib/Model/FatturaElettronicaExportOptions.php
 lib/Model/FatturaElettronicaExportResult.php
 lib/Model/FatturaElettronicaImportResult.php
@@ -296,7 +289,6 @@ lib/Model/Spesa.php
 lib/Model/SpesaDocumento.php
 lib/Model/Taglia.php
 lib/Model/Valuta.php
-lib/Model/WebHook.php
 lib/ObjectSerializer.php
 phpunit.xml.dist
 test/Api/AnagraficaApiTest.php
@@ -317,7 +309,6 @@ test/Api/ContoContabileApiTest.php
 test/Api/DistintaBaseApiTest.php
 test/Api/DocumentoApiTest.php
 test/Api/DocumentoMediaFileApiTest.php
-test/Api/EventoApiTest.php
 test/Api/FatturaElettronicaXmlApiTest.php
 test/Api/FatturaElettronicaXmlTemplateApiTest.php
 test/Api/GiacenzaApiTest.php
@@ -347,7 +338,6 @@ test/Api/SpesaApiTest.php
 test/Api/SpesaDocumentoApiTest.php
 test/Api/TagliaApiTest.php
 test/Api/ValutaApiTest.php
-test/Api/WebHookApiTest.php
 test/Model/AllegatoDocumentoTest.php
 test/Model/AnagraficaNominativo1Test.php
 test/Model/AnagraficaNominativo2Test.php
@@ -390,7 +380,6 @@ test/Model/DocumentoComputeResultTest.php
 test/Model/DocumentoImportDataTest.php
 test/Model/DocumentoMediaFileTest.php
 test/Model/DocumentoTest.php
-test/Model/EventoTest.php
 test/Model/FatturaElettronicaExportOptionsTest.php
 test/Model/FatturaElettronicaExportResultTest.php
 test/Model/FatturaElettronicaImportResultTest.php
@@ -442,4 +431,3 @@ test/Model/SpesaDocumentoTest.php
 test/Model/SpesaTest.php
 test/Model/TagliaTest.php
 test/Model/ValutaTest.php
-test/Model/WebHookTest.php
