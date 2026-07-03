@@ -12,7 +12,7 @@
 /**
  * Amica Cloud API
  *
- * L'Amica Cloud API fornisce accesso programmatico a tutti i dati aziendali gestiti da [Amica 20](https://gestionaleamica.com). Supporta il ciclo completo di documenti, fatture, magazzino, contabilità e anagrafiche. Per guide e documentazione completa, visitare [amica.dev](https://amica.dev/).  ## Autenticazione  Tutte le richieste API richiedono un token OAuth 2.0 Bearer valido, da includere nell'header `Authorization`:  ``` Authorization: Bearer <token> ```  ### Registra la tua app  Per integrare l'Amica Cloud API registra la tua applicazione sull'**App Store di Amica**. Al termine della registrazione ottieni una coppia di credenziali OAuth 2.0 — `client_id` e `client_secret` (il secret è mostrato **una sola volta**) — e scegli gli **scope** e il **flusso di autenticazione** desiderati.  ### Scegli il flusso  - **Authorization Code con PKCE** (consigliato per app che operano per conto di un utente Amica): l'utente autorizza la tua app tramite la pagina di consenso dell'identity provider; la tua app riceve un `code` da scambiare con un access token.    ```   GET  {identity-provider}/connect/authorize?response_type=code&client_id=<client_id>&redirect_uri=<redirect_uri>&scope=openid%20read%20write%20documenti&code_challenge=<challenge>&code_challenge_method=S256   POST {identity-provider}/connect/token        grant_type=authorization_code&code=<code>&code_verifier=<verifier>&client_id=<client_id>&client_secret=<client_secret>&redirect_uri=<redirect_uri>   ```  - **Client Credentials** (per integrazioni server-to-server, senza utente interattivo):    ```   POST {identity-provider}/connect/token   Content-Type: application/x-www-form-urlencoded    grant_type=client_credentials&client_id=<client_id>&client_secret=<client_secret>&scope=read write documenti contabilita   ```    > **Nota:** il flusso Client Credentials è disponibile solo per le **app private**, non per quelle pubblicate sul marketplace.  In entrambi i casi la risposta contiene l'`access_token` (JWT con `aud: amica-cloud`) da usare nelle chiamate successive finché non scade (`expires_in`), dopodiché va richiesto un nuovo token. Ogni token contiene uno o più **scope** che determinano le aree accessibili (vedi sotto). Dalla [API Reference](https://amica.dev) è possibile incollare un access token per provare gli endpoint direttamente dal browser.  ## Scope di autorizzazione  L'accesso agli endpoint è governato dagli scope presenti nel token OAuth:  | Scope | Descrizione | |-|-| | `comune` | Anagrafiche: contatti, indirizzi, nazioni, valute, modalità di pagamento, ecc. | | `magazzino` | Magazzino: articoli, listini, movimenti di magazzino, giacenze, distinte base. | | `contabilita` | Contabilità: registrazioni contabili, scadenze, castelletti IVA, fatture elettroniche XML. | | `documenti` | Documenti: fatture, note di credito, DDT, ordini, preventivi, proforma ed emissione. |  Una richiesta verso un endpoint non coperto dallo scope del token riceverà una risposta `403 Forbidden`.  ## Company ID  La maggior parte degli endpoint è relativa a una specifica azienda e segue il pattern:  ``` /api/v3/{companyId}/risorsa ```  Il `companyId` è l'identificativo univoco di ciascun database aziendale. Usare l'endpoint `GET /api/v3/config/Azienda` per ottenere l'elenco delle aziende disponibili.  ## Paginazione  Gli endpoint che restituiscono liste supportano la paginazione tramite query parameter:  | Parametro | Descrizione | |-|-| | `Skip` | Numero di elementi da saltare dall'inizio del set di risultati. | | `Take` | Numero di elementi da includere nella risposta. |  La risposta include due header:  | Header | Descrizione | |-|-| | `X-Read-TotalCount` | Numero totale di elementi che soddisfano il filtro corrente. | | `X-Read-Count` | Numero di elementi effettivamente restituiti nel body della risposta. |  ## Ordinamento e filtri  Gli endpoint lista accettano parametri aggiuntivi:  | Parametro | Descrizione | |-|-| | `Order` | Lista di proprietà per l'ordinamento, separate da virgola. Un segno meno (`-`) prima del nome indica ordine discendente. Es. `-RagioneSociale1,Citta`. | | `Filter` | Condizioni di ricerca: lista di espressioni separate da virgola, ciascuna formata da nome campo, operatore, valore ed eventuale connettore logico. Operatori: `$eq`, `$ne`, `$gt`, `$lt`, `$lte`, `$gte`, `$ct` (contiene), `$nct`, `$sw` (inizia con), `$ew` (finisce con). Connettori: `$and` (default, omissibile) e `$or`; le sotto-query si racchiudono tra `[]`. Es. `RagioneSociale1 $ct acme $or, Fido $gt 1000`. | | `SkipTotalCount` | Se `true`, l'header `X-Read-TotalCount` viene omesso dalla risposta: migliori prestazioni a scapito del conteggio totale. Default `false`. |  ## Espansione oggetti correlati  Gli endpoint singoli e lista supportano il parametro `Expand`. Quando fornito, gli oggetti correlati vengono inclusi inline nella risposta anziché restituiti come riferimenti. È possibile specificare espansioni multiple separate da virgola.  ## Gestione errori  L'API usa codici di stato HTTP standard e restituisce [RFC 7807](https://tools.ietf.org/html/rfc7807) Problem Details in caso di errore:  | Codice | Significato | |-|-| | `400` | Bad Request — validazione fallita o parametro obbligatorio mancante. | | `401` | Unauthorized — token mancante o scaduto. | | `403` | Forbidden — il token non possiede lo scope richiesto. | | `404` | Not Found — la risorsa richiesta non esiste. | | `409` | Conflict — conflitto di concorrenza. | | `422` | Unprocessable Entity — entità non processabile (es. token di concorrenza obsoleto). |  Alcune risposte `400` includono un campo `overridable` che indica se l'errore di validazione può essere ignorato impostando il parametro `validationOverride` a `true`.  ## Controllo della concorrenza  Le entità contengono una proprietà `ConcurrencyToken`. Quando si aggiorna un'entità tramite `PUT`, il token nel body della richiesta viene confrontato con il valore memorizzato. Se differiscono, viene restituito un `422 Unprocessable Entity`. Usare sempre l'ultimo token ricevuto da una risposta `GET` o `POST`.
+ * L'Amica Cloud API fornisce accesso programmatico a tutti i dati aziendali gestiti da [Amica 20](https://gestionaleamica.com). Supporta il ciclo completo di documenti, fatture, magazzino, contabilità e anagrafiche. Per guide e documentazione completa, visitare [amica.dev](https://amica.dev/).  ## Autenticazione  Tutte le richieste API richiedono un token OAuth 2.0 Bearer valido, da includere nell'header `Authorization`:  ``` Authorization: Bearer <token> ```  ### Registra la tua app  Per integrare l'Amica Cloud API registra la tua applicazione sull'[**App Store di Amica**](https://apps.amica20.it). Al termine della registrazione ottieni una coppia di credenziali OAuth 2.0 — `client_id` e `client_secret` (il secret è mostrato **una sola volta**) — e scegli gli **scope** e il **flusso di autenticazione** desiderati.  ### Scegli il flusso  La scelta dipende da **come** la tua applicazione si autentica:  - C'è un **utente** che può accedere via browser (web app, SPA, app mobile)? → **Authorization Code con PKCE**. - È un **servizio headless** (backend, batch, integrazione server-to-server) di una **singola azienda**, senza un utente che effettua il login? → **Client Credentials**.  #### Authorization Code con PKCE  Consigliato per le app che operano per conto di un utente Amica ed è l'**unico flusso disponibile per le app pubblicate sul marketplace**. Una sola registrazione serve un numero qualsiasi di aziende: ogni utente autorizza la tua app per la propria azienda tramite la pagina di consenso dell'identity provider, e il token riceve automaticamente il contesto di quell'azienda. La tua app riceve un `code` da scambiare con un access token.  ``` GET  {identity-provider}/connect/authorize?response_type=code&client_id=<client_id>&redirect_uri=<redirect_uri>&scope=openid%20read%20write%20documenti&code_challenge=<challenge>&code_challenge_method=S256 POST {identity-provider}/connect/token      grant_type=authorization_code&code=<code>&code_verifier=<verifier>&client_id=<client_id>&client_secret=<client_secret>&redirect_uri=<redirect_uri> ```  #### Client Credentials  Per integrazioni **server-to-server** senza utente interattivo. Disponibile solo per le **app private**, non per quelle pubblicate sul marketplace. Un'app Client Credentials è **legata a una singola azienda** — quella dell'utente che la registra — e il token ne riceve automaticamente il contesto. Per servire un'azienda diversa serve una registrazione separata; se devi distribuire la stessa app a più aziende usa invece **Authorization Code**.  ``` POST {identity-provider}/connect/token Content-Type: application/x-www-form-urlencoded  grant_type=client_credentials&client_id=<client_id>&client_secret=<client_secret>&scope=comune read write documenti ```  > **Importante:** non includere lo scope `openid` (né `profile`/`email`) in questo flusso. `openid` attiva OpenID Connect — richiede un utente che effettua il login e l'emissione di un ID token — cosa che un flusso server-to-server non prevede: la richiesta viene rifiutata con l'errore `Client cannot request OpenID scopes in client credentials flow`. Indica solo gli scope di risorsa (`comune`, `magazzino`, `documenti`, `contabilita`, ed eventualmente `read`/`write`).  In entrambi i casi la risposta contiene l'`access_token` (JWT con `aud: amica-cloud`) da usare nelle chiamate successive finché non scade (`expires_in`), dopodiché va richiesto un nuovo token. Ogni token contiene uno o più **scope** che determinano le aree accessibili (vedi sotto). Dalla [API Reference](https://amica.dev) è possibile incollare un access token per provare gli endpoint direttamente dal browser.  ## Scope di autorizzazione  L'accesso agli endpoint è governato dagli scope presenti nel token OAuth:  | Scope | Descrizione | |-|-| | `comune` | Anagrafiche: contatti, indirizzi, nazioni, valute, modalità di pagamento, ecc. | | `magazzino` | Magazzino: articoli, listini, movimenti di magazzino, giacenze, distinte base. | | `contabilita` | Contabilità: registrazioni contabili, scadenze, castelletti IVA, fatture elettroniche XML. | | `documenti` | Documenti: fatture, note di credito, DDT, ordini, preventivi, proforma ed emissione. |  Una richiesta verso un endpoint non coperto dallo scope del token riceverà una risposta `403 Forbidden`.  ## Company ID  La maggior parte degli endpoint è relativa a una specifica azienda e segue il pattern:  ``` /api/v3/{companyId}/risorsa ```  Il `companyId` è l'identificativo univoco di ciascun database aziendale. Usare l'endpoint `GET /api/v3/config/Azienda` per ottenere l'elenco delle aziende disponibili.  ## Paginazione  Gli endpoint che restituiscono liste supportano la paginazione tramite query parameter:  | Parametro | Descrizione | |-|-| | `Skip` | Numero di elementi da saltare dall'inizio del set di risultati. | | `Take` | Numero di elementi da includere nella risposta. |  La risposta include due header:  | Header | Descrizione | |-|-| | `X-Read-TotalCount` | Numero totale di elementi che soddisfano il filtro corrente. | | `X-Read-Count` | Numero di elementi effettivamente restituiti nel body della risposta. |  ## Ordinamento e filtri  Gli endpoint lista accettano parametri aggiuntivi:  | Parametro | Descrizione | |-|-| | `Order` | Lista di proprietà per l'ordinamento, separate da virgola. Un segno meno (`-`) prima del nome indica ordine discendente. Es. `-RagioneSociale1,Citta`. | | `Filter` | Condizioni di ricerca: lista di espressioni separate da virgola, ciascuna formata da nome campo, operatore, valore ed eventuale connettore logico. Operatori: `$eq`, `$ne`, `$gt`, `$lt`, `$lte`, `$gte`, `$ct` (contiene), `$nct`, `$sw` (inizia con), `$ew` (finisce con). Connettori: `$and` (default, omissibile) e `$or`; le sotto-query si racchiudono tra `[]`. Es. `RagioneSociale1 $ct acme $or, Fido $gt 1000`. | | `SkipTotalCount` | Se `true`, l'header `X-Read-TotalCount` viene omesso dalla risposta: migliori prestazioni a scapito del conteggio totale. Default `false`. |  ## Espansione oggetti correlati  Gli endpoint singoli e lista supportano il parametro `Expand`. Quando fornito, gli oggetti correlati vengono inclusi inline nella risposta anziché restituiti come riferimenti. È possibile specificare espansioni multiple separate da virgola.  ## Gestione errori  L'API usa codici di stato HTTP standard e restituisce [RFC 7807](https://tools.ietf.org/html/rfc7807) Problem Details in caso di errore:  | Codice | Significato | |-|-| | `400` | Bad Request — validazione fallita o parametro obbligatorio mancante. | | `401` | Unauthorized — token mancante o scaduto. | | `403` | Forbidden — il token non possiede lo scope richiesto. | | `404` | Not Found — la risorsa richiesta non esiste. | | `409` | Conflict — conflitto di concorrenza. | | `422` | Unprocessable Entity — entità non processabile (es. token di concorrenza obsoleto). |  Alcune risposte `400` includono un campo `overridable` che indica se l'errore di validazione può essere ignorato impostando il parametro `validationOverride` a `true`.  ## Controllo della concorrenza  Le entità contengono una proprietà `ConcurrencyToken`. Quando si aggiorna un'entità tramite `PUT`, il token nel body della richiesta viene confrontato con il valore memorizzato. Se differiscono, viene restituito un `422 Unprocessable Entity`. Usare sempre l'ultimo token ricevuto da una risposta `GET` o `POST`.
  *
  * The version of the OpenAPI document: v3
  * Contact: assistenza@gestionaleamica.com
@@ -198,6 +198,7 @@ class DocumentoApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoComputeData|null $documento_compute_data Dati di input per l&#39;operazione di calcolo. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoComputePost'] to see the possible values for this operation
      *
@@ -205,9 +206,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\DocumentoComputeResult
      */
-    public function apiVversionCompanyIdDocumentoComputePost($version, $company_id, $documento_compute_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoComputePost'][0])
+    public function apiVversionCompanyIdDocumentoComputePost($version, $company_id, $idempotency_key = null, $documento_compute_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoComputePost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdDocumentoComputePostWithHttpInfo($version, $company_id, $documento_compute_data, $contentType);
+        list($response) = $this->apiVversionCompanyIdDocumentoComputePostWithHttpInfo($version, $company_id, $idempotency_key, $documento_compute_data, $contentType);
         return $response;
     }
 
@@ -218,6 +219,7 @@ class DocumentoApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoComputeData|null $documento_compute_data Dati di input per l&#39;operazione di calcolo. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoComputePost'] to see the possible values for this operation
      *
@@ -225,9 +227,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\DocumentoComputeResult, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdDocumentoComputePostWithHttpInfo($version, $company_id, $documento_compute_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoComputePost'][0])
+    public function apiVversionCompanyIdDocumentoComputePostWithHttpInfo($version, $company_id, $idempotency_key = null, $documento_compute_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoComputePost'][0])
     {
-        $request = $this->apiVversionCompanyIdDocumentoComputePostRequest($version, $company_id, $documento_compute_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoComputePostRequest($version, $company_id, $idempotency_key, $documento_compute_data, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -345,15 +347,16 @@ class DocumentoApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoComputeData|null $documento_compute_data Dati di input per l&#39;operazione di calcolo. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoComputePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoComputePostAsync($version, $company_id, $documento_compute_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoComputePost'][0])
+    public function apiVversionCompanyIdDocumentoComputePostAsync($version, $company_id, $idempotency_key = null, $documento_compute_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoComputePost'][0])
     {
-        return $this->apiVversionCompanyIdDocumentoComputePostAsyncWithHttpInfo($version, $company_id, $documento_compute_data, $contentType)
+        return $this->apiVversionCompanyIdDocumentoComputePostAsyncWithHttpInfo($version, $company_id, $idempotency_key, $documento_compute_data, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -368,16 +371,17 @@ class DocumentoApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoComputeData|null $documento_compute_data Dati di input per l&#39;operazione di calcolo. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoComputePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoComputePostAsyncWithHttpInfo($version, $company_id, $documento_compute_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoComputePost'][0])
+    public function apiVversionCompanyIdDocumentoComputePostAsyncWithHttpInfo($version, $company_id, $idempotency_key = null, $documento_compute_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoComputePost'][0])
     {
         $returnType = '\Amica\Sdk\Model\DocumentoComputeResult';
-        $request = $this->apiVversionCompanyIdDocumentoComputePostRequest($version, $company_id, $documento_compute_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoComputePostRequest($version, $company_id, $idempotency_key, $documento_compute_data, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -420,13 +424,14 @@ class DocumentoApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoComputeData|null $documento_compute_data Dati di input per l&#39;operazione di calcolo. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoComputePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdDocumentoComputePostRequest($version, $company_id, $documento_compute_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoComputePost'][0])
+    public function apiVversionCompanyIdDocumentoComputePostRequest($version, $company_id, $idempotency_key = null, $documento_compute_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoComputePost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -445,6 +450,7 @@ class DocumentoApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/Documento/compute';
         $formParams = [];
         $queryParams = [];
@@ -453,6 +459,10 @@ class DocumentoApi
         $multipart = false;
 
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -978,15 +988,16 @@ class DocumentoApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $documento_id ID univoco del documento da emettere. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdEmitPost'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\Documento
      */
-    public function apiVversionCompanyIdDocumentoDocumentoIdEmitPost($version, $company_id, $documento_id, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdEmitPost'][0])
+    public function apiVversionCompanyIdDocumentoDocumentoIdEmitPost($version, $company_id, $documento_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdEmitPost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdDocumentoDocumentoIdEmitPostWithHttpInfo($version, $company_id, $documento_id, $contentType);
+        list($response) = $this->apiVversionCompanyIdDocumentoDocumentoIdEmitPostWithHttpInfo($version, $company_id, $documento_id, $idempotency_key, $contentType);
         return $response;
     }
 
@@ -998,15 +1009,16 @@ class DocumentoApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $documento_id ID univoco del documento da emettere. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdEmitPost'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\Documento, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdDocumentoDocumentoIdEmitPostWithHttpInfo($version, $company_id, $documento_id, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdEmitPost'][0])
+    public function apiVversionCompanyIdDocumentoDocumentoIdEmitPostWithHttpInfo($version, $company_id, $documento_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdEmitPost'][0])
     {
-        $request = $this->apiVversionCompanyIdDocumentoDocumentoIdEmitPostRequest($version, $company_id, $documento_id, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoDocumentoIdEmitPostRequest($version, $company_id, $documento_id, $idempotency_key, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -1125,14 +1137,15 @@ class DocumentoApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $documento_id ID univoco del documento da emettere. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdEmitPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoDocumentoIdEmitPostAsync($version, $company_id, $documento_id, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdEmitPost'][0])
+    public function apiVversionCompanyIdDocumentoDocumentoIdEmitPostAsync($version, $company_id, $documento_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdEmitPost'][0])
     {
-        return $this->apiVversionCompanyIdDocumentoDocumentoIdEmitPostAsyncWithHttpInfo($version, $company_id, $documento_id, $contentType)
+        return $this->apiVversionCompanyIdDocumentoDocumentoIdEmitPostAsyncWithHttpInfo($version, $company_id, $documento_id, $idempotency_key, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -1148,15 +1161,16 @@ class DocumentoApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $documento_id ID univoco del documento da emettere. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdEmitPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoDocumentoIdEmitPostAsyncWithHttpInfo($version, $company_id, $documento_id, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdEmitPost'][0])
+    public function apiVversionCompanyIdDocumentoDocumentoIdEmitPostAsyncWithHttpInfo($version, $company_id, $documento_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdEmitPost'][0])
     {
         $returnType = '\Amica\Sdk\Model\Documento';
-        $request = $this->apiVversionCompanyIdDocumentoDocumentoIdEmitPostRequest($version, $company_id, $documento_id, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoDocumentoIdEmitPostRequest($version, $company_id, $documento_id, $idempotency_key, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -1200,12 +1214,13 @@ class DocumentoApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $documento_id ID univoco del documento da emettere. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdEmitPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdDocumentoDocumentoIdEmitPostRequest($version, $company_id, $documento_id, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdEmitPost'][0])
+    public function apiVversionCompanyIdDocumentoDocumentoIdEmitPostRequest($version, $company_id, $documento_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdEmitPost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -1230,6 +1245,7 @@ class DocumentoApi
         }
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/Documento/{documentoId}/emit';
         $formParams = [];
         $queryParams = [];
@@ -1238,6 +1254,10 @@ class DocumentoApi
         $multipart = false;
 
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -1338,15 +1358,16 @@ class DocumentoApi
      * @param  string $version Versione API. (required)
      * @param  int $documento_id ID univoco del documento. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\Documento
      */
-    public function apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost($version, $documento_id, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost'][0])
+    public function apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost($version, $documento_id, $company_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostWithHttpInfo($version, $documento_id, $company_id, $contentType);
+        list($response) = $this->apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostWithHttpInfo($version, $documento_id, $company_id, $idempotency_key, $contentType);
         return $response;
     }
 
@@ -1358,15 +1379,16 @@ class DocumentoApi
      * @param  string $version Versione API. (required)
      * @param  int $documento_id ID univoco del documento. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\Documento, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostWithHttpInfo($version, $documento_id, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost'][0])
+    public function apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostWithHttpInfo($version, $documento_id, $company_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost'][0])
     {
-        $request = $this->apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostRequest($version, $documento_id, $company_id, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostRequest($version, $documento_id, $company_id, $idempotency_key, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -1485,14 +1507,15 @@ class DocumentoApi
      * @param  string $version Versione API. (required)
      * @param  int $documento_id ID univoco del documento. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostAsync($version, $documento_id, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost'][0])
+    public function apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostAsync($version, $documento_id, $company_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost'][0])
     {
-        return $this->apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostAsyncWithHttpInfo($version, $documento_id, $company_id, $contentType)
+        return $this->apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostAsyncWithHttpInfo($version, $documento_id, $company_id, $idempotency_key, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -1508,15 +1531,16 @@ class DocumentoApi
      * @param  string $version Versione API. (required)
      * @param  int $documento_id ID univoco del documento. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostAsyncWithHttpInfo($version, $documento_id, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost'][0])
+    public function apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostAsyncWithHttpInfo($version, $documento_id, $company_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost'][0])
     {
         $returnType = '\Amica\Sdk\Model\Documento';
-        $request = $this->apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostRequest($version, $documento_id, $company_id, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostRequest($version, $documento_id, $company_id, $idempotency_key, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -1560,12 +1584,13 @@ class DocumentoApi
      * @param  string $version Versione API. (required)
      * @param  int $documento_id ID univoco del documento. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostRequest($version, $documento_id, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost'][0])
+    public function apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePostRequest($version, $documento_id, $company_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoDocumentoIdNewinstancefromtemplatePost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -1590,6 +1615,7 @@ class DocumentoApi
         }
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/Documento/{documentoId}/newinstancefromtemplate';
         $formParams = [];
         $queryParams = [];
@@ -1598,6 +1624,10 @@ class DocumentoApi
         $multipart = false;
 
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -3039,6 +3069,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoImportData|null $documento_import_data Opzioni di importazione, inclusi gli ID degli acconti da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportAccontoPost'] to see the possible values for this operation
      *
@@ -3046,9 +3077,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdDocumentoIdImportAccontoPost($version, $company_id, $id, $validation_override = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportAccontoPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportAccontoPost($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportAccontoPost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdDocumentoIdImportAccontoPostWithHttpInfo($version, $company_id, $id, $validation_override, $documento_import_data, $contentType);
+        list($response) = $this->apiVversionCompanyIdDocumentoIdImportAccontoPostWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $documento_import_data, $contentType);
         return $response;
     }
 
@@ -3061,6 +3092,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoImportData|null $documento_import_data Opzioni di importazione, inclusi gli ID degli acconti da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportAccontoPost'] to see the possible values for this operation
      *
@@ -3068,9 +3100,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdDocumentoIdImportAccontoPostWithHttpInfo($version, $company_id, $id, $validation_override = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportAccontoPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportAccontoPostWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportAccontoPost'][0])
     {
-        $request = $this->apiVversionCompanyIdDocumentoIdImportAccontoPostRequest($version, $company_id, $id, $validation_override, $documento_import_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoIdImportAccontoPostRequest($version, $company_id, $id, $validation_override, $idempotency_key, $documento_import_data, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -3260,15 +3292,16 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoImportData|null $documento_import_data Opzioni di importazione, inclusi gli ID degli acconti da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportAccontoPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoIdImportAccontoPostAsync($version, $company_id, $id, $validation_override = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportAccontoPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportAccontoPostAsync($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportAccontoPost'][0])
     {
-        return $this->apiVversionCompanyIdDocumentoIdImportAccontoPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $documento_import_data, $contentType)
+        return $this->apiVversionCompanyIdDocumentoIdImportAccontoPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $documento_import_data, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -3285,16 +3318,17 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoImportData|null $documento_import_data Opzioni di importazione, inclusi gli ID degli acconti da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportAccontoPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoIdImportAccontoPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportAccontoPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportAccontoPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportAccontoPost'][0])
     {
         $returnType = '\Amica\Sdk\Model\Documento';
-        $request = $this->apiVversionCompanyIdDocumentoIdImportAccontoPostRequest($version, $company_id, $id, $validation_override, $documento_import_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoIdImportAccontoPostRequest($version, $company_id, $id, $validation_override, $idempotency_key, $documento_import_data, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -3339,13 +3373,14 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoImportData|null $documento_import_data Opzioni di importazione, inclusi gli ID degli acconti da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportAccontoPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdDocumentoIdImportAccontoPostRequest($version, $company_id, $id, $validation_override = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportAccontoPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportAccontoPostRequest($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportAccontoPost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -3372,6 +3407,7 @@ class DocumentoApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/Documento/{id}/import/acconto';
         $formParams = [];
         $queryParams = [];
@@ -3389,6 +3425,10 @@ class DocumentoApi
             false // required
         ) ?? []);
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -3497,6 +3537,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DdtImportData|null $ddt_import_data Opzioni di importazione, inclusi gli ID dei DDT da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportDdtPost'] to see the possible values for this operation
      *
@@ -3504,9 +3545,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdDocumentoIdImportDdtPost($version, $company_id, $id, $validation_override = null, $ddt_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportDdtPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportDdtPost($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $ddt_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportDdtPost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdDocumentoIdImportDdtPostWithHttpInfo($version, $company_id, $id, $validation_override, $ddt_import_data, $contentType);
+        list($response) = $this->apiVversionCompanyIdDocumentoIdImportDdtPostWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $ddt_import_data, $contentType);
         return $response;
     }
 
@@ -3519,6 +3560,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DdtImportData|null $ddt_import_data Opzioni di importazione, inclusi gli ID dei DDT da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportDdtPost'] to see the possible values for this operation
      *
@@ -3526,9 +3568,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdDocumentoIdImportDdtPostWithHttpInfo($version, $company_id, $id, $validation_override = null, $ddt_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportDdtPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportDdtPostWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $ddt_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportDdtPost'][0])
     {
-        $request = $this->apiVversionCompanyIdDocumentoIdImportDdtPostRequest($version, $company_id, $id, $validation_override, $ddt_import_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoIdImportDdtPostRequest($version, $company_id, $id, $validation_override, $idempotency_key, $ddt_import_data, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -3718,15 +3760,16 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DdtImportData|null $ddt_import_data Opzioni di importazione, inclusi gli ID dei DDT da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportDdtPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoIdImportDdtPostAsync($version, $company_id, $id, $validation_override = null, $ddt_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportDdtPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportDdtPostAsync($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $ddt_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportDdtPost'][0])
     {
-        return $this->apiVversionCompanyIdDocumentoIdImportDdtPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $ddt_import_data, $contentType)
+        return $this->apiVversionCompanyIdDocumentoIdImportDdtPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $ddt_import_data, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -3743,16 +3786,17 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DdtImportData|null $ddt_import_data Opzioni di importazione, inclusi gli ID dei DDT da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportDdtPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoIdImportDdtPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $ddt_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportDdtPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportDdtPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $ddt_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportDdtPost'][0])
     {
         $returnType = '\Amica\Sdk\Model\Documento';
-        $request = $this->apiVversionCompanyIdDocumentoIdImportDdtPostRequest($version, $company_id, $id, $validation_override, $ddt_import_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoIdImportDdtPostRequest($version, $company_id, $id, $validation_override, $idempotency_key, $ddt_import_data, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -3797,13 +3841,14 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DdtImportData|null $ddt_import_data Opzioni di importazione, inclusi gli ID dei DDT da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportDdtPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdDocumentoIdImportDdtPostRequest($version, $company_id, $id, $validation_override = null, $ddt_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportDdtPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportDdtPostRequest($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $ddt_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportDdtPost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -3830,6 +3875,7 @@ class DocumentoApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/Documento/{id}/import/ddt';
         $formParams = [];
         $queryParams = [];
@@ -3847,6 +3893,10 @@ class DocumentoApi
             false // required
         ) ?? []);
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -3955,6 +4005,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\OrdiniImportData|null $ordini_import_data Opzioni di importazione, inclusi gli ID degli ordini da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportOrdinePost'] to see the possible values for this operation
      *
@@ -3962,9 +4013,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdDocumentoIdImportOrdinePost($version, $company_id, $id, $validation_override = null, $ordini_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportOrdinePost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportOrdinePost($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $ordini_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportOrdinePost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdDocumentoIdImportOrdinePostWithHttpInfo($version, $company_id, $id, $validation_override, $ordini_import_data, $contentType);
+        list($response) = $this->apiVversionCompanyIdDocumentoIdImportOrdinePostWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $ordini_import_data, $contentType);
         return $response;
     }
 
@@ -3977,6 +4028,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\OrdiniImportData|null $ordini_import_data Opzioni di importazione, inclusi gli ID degli ordini da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportOrdinePost'] to see the possible values for this operation
      *
@@ -3984,9 +4036,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdDocumentoIdImportOrdinePostWithHttpInfo($version, $company_id, $id, $validation_override = null, $ordini_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportOrdinePost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportOrdinePostWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $ordini_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportOrdinePost'][0])
     {
-        $request = $this->apiVversionCompanyIdDocumentoIdImportOrdinePostRequest($version, $company_id, $id, $validation_override, $ordini_import_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoIdImportOrdinePostRequest($version, $company_id, $id, $validation_override, $idempotency_key, $ordini_import_data, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -4176,15 +4228,16 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\OrdiniImportData|null $ordini_import_data Opzioni di importazione, inclusi gli ID degli ordini da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportOrdinePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoIdImportOrdinePostAsync($version, $company_id, $id, $validation_override = null, $ordini_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportOrdinePost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportOrdinePostAsync($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $ordini_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportOrdinePost'][0])
     {
-        return $this->apiVversionCompanyIdDocumentoIdImportOrdinePostAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $ordini_import_data, $contentType)
+        return $this->apiVversionCompanyIdDocumentoIdImportOrdinePostAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $ordini_import_data, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -4201,16 +4254,17 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\OrdiniImportData|null $ordini_import_data Opzioni di importazione, inclusi gli ID degli ordini da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportOrdinePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoIdImportOrdinePostAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $ordini_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportOrdinePost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportOrdinePostAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $ordini_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportOrdinePost'][0])
     {
         $returnType = '\Amica\Sdk\Model\Documento';
-        $request = $this->apiVversionCompanyIdDocumentoIdImportOrdinePostRequest($version, $company_id, $id, $validation_override, $ordini_import_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoIdImportOrdinePostRequest($version, $company_id, $id, $validation_override, $idempotency_key, $ordini_import_data, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -4255,13 +4309,14 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\OrdiniImportData|null $ordini_import_data Opzioni di importazione, inclusi gli ID degli ordini da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportOrdinePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdDocumentoIdImportOrdinePostRequest($version, $company_id, $id, $validation_override = null, $ordini_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportOrdinePost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportOrdinePostRequest($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $ordini_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportOrdinePost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -4288,6 +4343,7 @@ class DocumentoApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/Documento/{id}/import/ordine';
         $formParams = [];
         $queryParams = [];
@@ -4305,6 +4361,10 @@ class DocumentoApi
             false // required
         ) ?? []);
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -4413,6 +4473,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoImportData|null $documento_import_data Opzioni di importazione, inclusi gli ID dei preventivi da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportPreventivoPost'] to see the possible values for this operation
      *
@@ -4420,9 +4481,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdDocumentoIdImportPreventivoPost($version, $company_id, $id, $validation_override = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportPreventivoPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportPreventivoPost($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportPreventivoPost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdDocumentoIdImportPreventivoPostWithHttpInfo($version, $company_id, $id, $validation_override, $documento_import_data, $contentType);
+        list($response) = $this->apiVversionCompanyIdDocumentoIdImportPreventivoPostWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $documento_import_data, $contentType);
         return $response;
     }
 
@@ -4435,6 +4496,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoImportData|null $documento_import_data Opzioni di importazione, inclusi gli ID dei preventivi da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportPreventivoPost'] to see the possible values for this operation
      *
@@ -4442,9 +4504,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdDocumentoIdImportPreventivoPostWithHttpInfo($version, $company_id, $id, $validation_override = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportPreventivoPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportPreventivoPostWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportPreventivoPost'][0])
     {
-        $request = $this->apiVversionCompanyIdDocumentoIdImportPreventivoPostRequest($version, $company_id, $id, $validation_override, $documento_import_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoIdImportPreventivoPostRequest($version, $company_id, $id, $validation_override, $idempotency_key, $documento_import_data, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -4634,15 +4696,16 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoImportData|null $documento_import_data Opzioni di importazione, inclusi gli ID dei preventivi da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportPreventivoPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoIdImportPreventivoPostAsync($version, $company_id, $id, $validation_override = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportPreventivoPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportPreventivoPostAsync($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportPreventivoPost'][0])
     {
-        return $this->apiVversionCompanyIdDocumentoIdImportPreventivoPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $documento_import_data, $contentType)
+        return $this->apiVversionCompanyIdDocumentoIdImportPreventivoPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $documento_import_data, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -4659,16 +4722,17 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoImportData|null $documento_import_data Opzioni di importazione, inclusi gli ID dei preventivi da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportPreventivoPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoIdImportPreventivoPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportPreventivoPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportPreventivoPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportPreventivoPost'][0])
     {
         $returnType = '\Amica\Sdk\Model\Documento';
-        $request = $this->apiVversionCompanyIdDocumentoIdImportPreventivoPostRequest($version, $company_id, $id, $validation_override, $documento_import_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoIdImportPreventivoPostRequest($version, $company_id, $id, $validation_override, $idempotency_key, $documento_import_data, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -4713,13 +4777,14 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoImportData|null $documento_import_data Opzioni di importazione, inclusi gli ID dei preventivi da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportPreventivoPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdDocumentoIdImportPreventivoPostRequest($version, $company_id, $id, $validation_override = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportPreventivoPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportPreventivoPostRequest($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportPreventivoPost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -4746,6 +4811,7 @@ class DocumentoApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/Documento/{id}/import/preventivo';
         $formParams = [];
         $queryParams = [];
@@ -4763,6 +4829,10 @@ class DocumentoApi
             false // required
         ) ?? []);
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -4871,6 +4941,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoImportData|null $documento_import_data Opzioni di importazione, inclusi gli ID delle proforma da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportProformaPost'] to see the possible values for this operation
      *
@@ -4878,9 +4949,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdDocumentoIdImportProformaPost($version, $company_id, $id, $validation_override = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportProformaPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportProformaPost($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportProformaPost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdDocumentoIdImportProformaPostWithHttpInfo($version, $company_id, $id, $validation_override, $documento_import_data, $contentType);
+        list($response) = $this->apiVversionCompanyIdDocumentoIdImportProformaPostWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $documento_import_data, $contentType);
         return $response;
     }
 
@@ -4893,6 +4964,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoImportData|null $documento_import_data Opzioni di importazione, inclusi gli ID delle proforma da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportProformaPost'] to see the possible values for this operation
      *
@@ -4900,9 +4972,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdDocumentoIdImportProformaPostWithHttpInfo($version, $company_id, $id, $validation_override = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportProformaPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportProformaPostWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportProformaPost'][0])
     {
-        $request = $this->apiVversionCompanyIdDocumentoIdImportProformaPostRequest($version, $company_id, $id, $validation_override, $documento_import_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoIdImportProformaPostRequest($version, $company_id, $id, $validation_override, $idempotency_key, $documento_import_data, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -5092,15 +5164,16 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoImportData|null $documento_import_data Opzioni di importazione, inclusi gli ID delle proforma da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportProformaPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoIdImportProformaPostAsync($version, $company_id, $id, $validation_override = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportProformaPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportProformaPostAsync($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportProformaPost'][0])
     {
-        return $this->apiVversionCompanyIdDocumentoIdImportProformaPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $documento_import_data, $contentType)
+        return $this->apiVversionCompanyIdDocumentoIdImportProformaPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $documento_import_data, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -5117,16 +5190,17 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoImportData|null $documento_import_data Opzioni di importazione, inclusi gli ID delle proforma da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportProformaPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoIdImportProformaPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportProformaPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportProformaPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportProformaPost'][0])
     {
         $returnType = '\Amica\Sdk\Model\Documento';
-        $request = $this->apiVversionCompanyIdDocumentoIdImportProformaPostRequest($version, $company_id, $id, $validation_override, $documento_import_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoIdImportProformaPostRequest($version, $company_id, $id, $validation_override, $idempotency_key, $documento_import_data, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -5171,13 +5245,14 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\DocumentoImportData|null $documento_import_data Opzioni di importazione, inclusi gli ID delle proforma da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportProformaPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdDocumentoIdImportProformaPostRequest($version, $company_id, $id, $validation_override = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportProformaPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportProformaPostRequest($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportProformaPost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -5204,6 +5279,7 @@ class DocumentoApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/Documento/{id}/import/proforma';
         $formParams = [];
         $queryParams = [];
@@ -5221,6 +5297,10 @@ class DocumentoApi
             false // required
         ) ?? []);
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -5329,6 +5409,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\ResoImportData|null $reso_import_data Opzioni di importazione, inclusi gli ID dei resi da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportResoPost'] to see the possible values for this operation
      *
@@ -5336,9 +5417,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdDocumentoIdImportResoPost($version, $company_id, $id, $validation_override = null, $reso_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportResoPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportResoPost($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $reso_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportResoPost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdDocumentoIdImportResoPostWithHttpInfo($version, $company_id, $id, $validation_override, $reso_import_data, $contentType);
+        list($response) = $this->apiVversionCompanyIdDocumentoIdImportResoPostWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $reso_import_data, $contentType);
         return $response;
     }
 
@@ -5351,6 +5432,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\ResoImportData|null $reso_import_data Opzioni di importazione, inclusi gli ID dei resi da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportResoPost'] to see the possible values for this operation
      *
@@ -5358,9 +5440,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdDocumentoIdImportResoPostWithHttpInfo($version, $company_id, $id, $validation_override = null, $reso_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportResoPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportResoPostWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $reso_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportResoPost'][0])
     {
-        $request = $this->apiVversionCompanyIdDocumentoIdImportResoPostRequest($version, $company_id, $id, $validation_override, $reso_import_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoIdImportResoPostRequest($version, $company_id, $id, $validation_override, $idempotency_key, $reso_import_data, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -5550,15 +5632,16 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\ResoImportData|null $reso_import_data Opzioni di importazione, inclusi gli ID dei resi da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportResoPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoIdImportResoPostAsync($version, $company_id, $id, $validation_override = null, $reso_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportResoPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportResoPostAsync($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $reso_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportResoPost'][0])
     {
-        return $this->apiVversionCompanyIdDocumentoIdImportResoPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $reso_import_data, $contentType)
+        return $this->apiVversionCompanyIdDocumentoIdImportResoPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $reso_import_data, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -5575,16 +5658,17 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\ResoImportData|null $reso_import_data Opzioni di importazione, inclusi gli ID dei resi da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportResoPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoIdImportResoPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $reso_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportResoPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportResoPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $reso_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportResoPost'][0])
     {
         $returnType = '\Amica\Sdk\Model\Documento';
-        $request = $this->apiVversionCompanyIdDocumentoIdImportResoPostRequest($version, $company_id, $id, $validation_override, $reso_import_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoIdImportResoPostRequest($version, $company_id, $id, $validation_override, $idempotency_key, $reso_import_data, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -5629,13 +5713,14 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID del documento di destinazione. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\ResoImportData|null $reso_import_data Opzioni di importazione, inclusi gli ID dei resi da importare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdImportResoPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdDocumentoIdImportResoPostRequest($version, $company_id, $id, $validation_override = null, $reso_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportResoPost'][0])
+    public function apiVversionCompanyIdDocumentoIdImportResoPostRequest($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $reso_import_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdImportResoPost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -5662,6 +5747,7 @@ class DocumentoApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/Documento/{id}/import/reso';
         $formParams = [];
         $queryParams = [];
@@ -5679,6 +5765,10 @@ class DocumentoApi
             false // required
         ) ?? []);
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -5787,6 +5877,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\Documento|null $documento Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdPut'] to see the possible values for this operation
      *
@@ -5794,9 +5885,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdDocumentoIdPut($version, $company_id, $id, $validation_override = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdPut'][0])
+    public function apiVversionCompanyIdDocumentoIdPut($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdPut'][0])
     {
-        list($response) = $this->apiVversionCompanyIdDocumentoIdPutWithHttpInfo($version, $company_id, $id, $validation_override, $documento, $contentType);
+        list($response) = $this->apiVversionCompanyIdDocumentoIdPutWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $documento, $contentType);
         return $response;
     }
 
@@ -5809,6 +5900,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\Documento|null $documento Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdPut'] to see the possible values for this operation
      *
@@ -5816,9 +5908,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdDocumentoIdPutWithHttpInfo($version, $company_id, $id, $validation_override = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdPut'][0])
+    public function apiVversionCompanyIdDocumentoIdPutWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdPut'][0])
     {
-        $request = $this->apiVversionCompanyIdDocumentoIdPutRequest($version, $company_id, $id, $validation_override, $documento, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoIdPutRequest($version, $company_id, $id, $validation_override, $idempotency_key, $documento, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -6043,15 +6135,16 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\Documento|null $documento Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdPut'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoIdPutAsync($version, $company_id, $id, $validation_override = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdPut'][0])
+    public function apiVversionCompanyIdDocumentoIdPutAsync($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdPut'][0])
     {
-        return $this->apiVversionCompanyIdDocumentoIdPutAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $documento, $contentType)
+        return $this->apiVversionCompanyIdDocumentoIdPutAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $documento, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -6068,16 +6161,17 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\Documento|null $documento Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdPut'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoIdPutAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdPut'][0])
+    public function apiVversionCompanyIdDocumentoIdPutAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdPut'][0])
     {
         $returnType = '\Amica\Sdk\Model\Documento';
-        $request = $this->apiVversionCompanyIdDocumentoIdPutRequest($version, $company_id, $id, $validation_override, $documento, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoIdPutRequest($version, $company_id, $id, $validation_override, $idempotency_key, $documento, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -6122,13 +6216,14 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\Documento|null $documento Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoIdPut'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdDocumentoIdPutRequest($version, $company_id, $id, $validation_override = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdPut'][0])
+    public function apiVversionCompanyIdDocumentoIdPutRequest($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoIdPut'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -6155,6 +6250,7 @@ class DocumentoApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/Documento/{id}';
         $formParams = [];
         $queryParams = [];
@@ -6172,6 +6268,10 @@ class DocumentoApi
             false // required
         ) ?? []);
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -6655,6 +6755,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int|null $id Non utilizzato. (optional)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\PeriodicInvoicingData|null $periodic_invoicing_data Criteri e opzioni di fatturazione periodica. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoPeriodicinvoicingPost'] to see the possible values for this operation
      *
@@ -6662,9 +6763,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\Documento[]|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdDocumentoPeriodicinvoicingPost($version, $company_id, $id = null, $validation_override = null, $periodic_invoicing_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPeriodicinvoicingPost'][0])
+    public function apiVversionCompanyIdDocumentoPeriodicinvoicingPost($version, $company_id, $id = null, $validation_override = null, $idempotency_key = null, $periodic_invoicing_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPeriodicinvoicingPost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdDocumentoPeriodicinvoicingPostWithHttpInfo($version, $company_id, $id, $validation_override, $periodic_invoicing_data, $contentType);
+        list($response) = $this->apiVversionCompanyIdDocumentoPeriodicinvoicingPostWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $periodic_invoicing_data, $contentType);
         return $response;
     }
 
@@ -6677,6 +6778,7 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int|null $id Non utilizzato. (optional)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\PeriodicInvoicingData|null $periodic_invoicing_data Criteri e opzioni di fatturazione periodica. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoPeriodicinvoicingPost'] to see the possible values for this operation
      *
@@ -6684,9 +6786,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\Documento[]|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdDocumentoPeriodicinvoicingPostWithHttpInfo($version, $company_id, $id = null, $validation_override = null, $periodic_invoicing_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPeriodicinvoicingPost'][0])
+    public function apiVversionCompanyIdDocumentoPeriodicinvoicingPostWithHttpInfo($version, $company_id, $id = null, $validation_override = null, $idempotency_key = null, $periodic_invoicing_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPeriodicinvoicingPost'][0])
     {
-        $request = $this->apiVversionCompanyIdDocumentoPeriodicinvoicingPostRequest($version, $company_id, $id, $validation_override, $periodic_invoicing_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoPeriodicinvoicingPostRequest($version, $company_id, $id, $validation_override, $idempotency_key, $periodic_invoicing_data, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -6876,15 +6978,16 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int|null $id Non utilizzato. (optional)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\PeriodicInvoicingData|null $periodic_invoicing_data Criteri e opzioni di fatturazione periodica. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoPeriodicinvoicingPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoPeriodicinvoicingPostAsync($version, $company_id, $id = null, $validation_override = null, $periodic_invoicing_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPeriodicinvoicingPost'][0])
+    public function apiVversionCompanyIdDocumentoPeriodicinvoicingPostAsync($version, $company_id, $id = null, $validation_override = null, $idempotency_key = null, $periodic_invoicing_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPeriodicinvoicingPost'][0])
     {
-        return $this->apiVversionCompanyIdDocumentoPeriodicinvoicingPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $periodic_invoicing_data, $contentType)
+        return $this->apiVversionCompanyIdDocumentoPeriodicinvoicingPostAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $periodic_invoicing_data, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -6901,16 +7004,17 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int|null $id Non utilizzato. (optional)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\PeriodicInvoicingData|null $periodic_invoicing_data Criteri e opzioni di fatturazione periodica. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoPeriodicinvoicingPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoPeriodicinvoicingPostAsyncWithHttpInfo($version, $company_id, $id = null, $validation_override = null, $periodic_invoicing_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPeriodicinvoicingPost'][0])
+    public function apiVversionCompanyIdDocumentoPeriodicinvoicingPostAsyncWithHttpInfo($version, $company_id, $id = null, $validation_override = null, $idempotency_key = null, $periodic_invoicing_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPeriodicinvoicingPost'][0])
     {
         $returnType = '\Amica\Sdk\Model\Documento[]';
-        $request = $this->apiVversionCompanyIdDocumentoPeriodicinvoicingPostRequest($version, $company_id, $id, $validation_override, $periodic_invoicing_data, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoPeriodicinvoicingPostRequest($version, $company_id, $id, $validation_override, $idempotency_key, $periodic_invoicing_data, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -6955,13 +7059,14 @@ class DocumentoApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int|null $id Non utilizzato. (optional)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\PeriodicInvoicingData|null $periodic_invoicing_data Criteri e opzioni di fatturazione periodica. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoPeriodicinvoicingPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdDocumentoPeriodicinvoicingPostRequest($version, $company_id, $id = null, $validation_override = null, $periodic_invoicing_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPeriodicinvoicingPost'][0])
+    public function apiVversionCompanyIdDocumentoPeriodicinvoicingPostRequest($version, $company_id, $id = null, $validation_override = null, $idempotency_key = null, $periodic_invoicing_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPeriodicinvoicingPost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -6977,6 +7082,7 @@ class DocumentoApi
                 'Missing the required parameter $company_id when calling apiVversionCompanyIdDocumentoPeriodicinvoicingPost'
             );
         }
+
 
 
 
@@ -7008,6 +7114,10 @@ class DocumentoApi
             false // required
         ) ?? []);
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -7107,6 +7217,7 @@ class DocumentoApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\Documento|null $documento Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoPost'] to see the possible values for this operation
      *
@@ -7114,9 +7225,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdDocumentoPost($version, $company_id, $validation_override = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPost'][0])
+    public function apiVversionCompanyIdDocumentoPost($version, $company_id, $validation_override = null, $idempotency_key = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdDocumentoPostWithHttpInfo($version, $company_id, $validation_override, $documento, $contentType);
+        list($response) = $this->apiVversionCompanyIdDocumentoPostWithHttpInfo($version, $company_id, $validation_override, $idempotency_key, $documento, $contentType);
         return $response;
     }
 
@@ -7128,6 +7239,7 @@ class DocumentoApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\Documento|null $documento Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoPost'] to see the possible values for this operation
      *
@@ -7135,9 +7247,9 @@ class DocumentoApi
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\Documento|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdDocumentoPostWithHttpInfo($version, $company_id, $validation_override = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPost'][0])
+    public function apiVversionCompanyIdDocumentoPostWithHttpInfo($version, $company_id, $validation_override = null, $idempotency_key = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPost'][0])
     {
-        $request = $this->apiVversionCompanyIdDocumentoPostRequest($version, $company_id, $validation_override, $documento, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoPostRequest($version, $company_id, $validation_override, $idempotency_key, $documento, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -7326,15 +7438,16 @@ class DocumentoApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\Documento|null $documento Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoPostAsync($version, $company_id, $validation_override = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPost'][0])
+    public function apiVversionCompanyIdDocumentoPostAsync($version, $company_id, $validation_override = null, $idempotency_key = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPost'][0])
     {
-        return $this->apiVversionCompanyIdDocumentoPostAsyncWithHttpInfo($version, $company_id, $validation_override, $documento, $contentType)
+        return $this->apiVversionCompanyIdDocumentoPostAsyncWithHttpInfo($version, $company_id, $validation_override, $idempotency_key, $documento, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -7350,16 +7463,17 @@ class DocumentoApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\Documento|null $documento Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdDocumentoPostAsyncWithHttpInfo($version, $company_id, $validation_override = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPost'][0])
+    public function apiVversionCompanyIdDocumentoPostAsyncWithHttpInfo($version, $company_id, $validation_override = null, $idempotency_key = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPost'][0])
     {
         $returnType = '\Amica\Sdk\Model\Documento';
-        $request = $this->apiVversionCompanyIdDocumentoPostRequest($version, $company_id, $validation_override, $documento, $contentType);
+        $request = $this->apiVversionCompanyIdDocumentoPostRequest($version, $company_id, $validation_override, $idempotency_key, $documento, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -7403,13 +7517,14 @@ class DocumentoApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\Documento|null $documento Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdDocumentoPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdDocumentoPostRequest($version, $company_id, $validation_override = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPost'][0])
+    public function apiVversionCompanyIdDocumentoPostRequest($version, $company_id, $validation_override = null, $idempotency_key = null, $documento = null, string $contentType = self::contentTypes['apiVversionCompanyIdDocumentoPost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -7425,6 +7540,7 @@ class DocumentoApi
                 'Missing the required parameter $company_id when calling apiVversionCompanyIdDocumentoPost'
             );
         }
+
 
 
 
@@ -7446,6 +7562,10 @@ class DocumentoApi
             false // required
         ) ?? []);
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {

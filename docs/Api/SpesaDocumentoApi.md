@@ -32,7 +32,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -81,7 +81,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -110,7 +110,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -149,7 +149,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -178,7 +178,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -219,7 +219,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -233,7 +233,7 @@ try {
 ## `apiVversionCompanyIdSpesaDocumentoIdPut()`
 
 ```php
-apiVversionCompanyIdSpesaDocumentoIdPut($version, $company_id, $id, $validation_override, $spesa_documento): \Amica\Sdk\Model\SpesaDocumento
+apiVversionCompanyIdSpesaDocumentoIdPut($version, $company_id, $id, $validation_override, $idempotency_key, $spesa_documento): \Amica\Sdk\Model\SpesaDocumento
 ```
 
 Aggiorna un elemento esistente.
@@ -248,7 +248,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -265,10 +265,11 @@ $version = 'version_example'; // string | Versione API.
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
 $id = 56; // int | ID univoco dell'elemento da aggiornare.
 $validation_override = True; // bool | Se applicare eventualmente l'override della validazione.
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
 $spesa_documento = new \Amica\Sdk\Model\SpesaDocumento(); // \Amica\Sdk\Model\SpesaDocumento | Istanza dell'elemento da salvare.
 
 try {
-    $result = $apiInstance->apiVversionCompanyIdSpesaDocumentoIdPut($version, $company_id, $id, $validation_override, $spesa_documento);
+    $result = $apiInstance->apiVversionCompanyIdSpesaDocumentoIdPut($version, $company_id, $id, $validation_override, $idempotency_key, $spesa_documento);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling SpesaDocumentoApi->apiVversionCompanyIdSpesaDocumentoIdPut: ', $e->getMessage(), PHP_EOL;
@@ -283,6 +284,7 @@ try {
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
 | **id** | **int**| ID univoco dell&#39;elemento da aggiornare. | |
 | **validation_override** | **bool**| Se applicare eventualmente l&#39;override della validazione. | [optional] |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
 | **spesa_documento** | [**\Amica\Sdk\Model\SpesaDocumento**](../Model/SpesaDocumento.md)| Istanza dell&#39;elemento da salvare. | [optional] |
 
 ### Return type
@@ -291,7 +293,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -322,7 +324,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -359,7 +361,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -373,7 +375,7 @@ try {
 ## `apiVversionCompanyIdSpesaDocumentoPost()`
 
 ```php
-apiVversionCompanyIdSpesaDocumentoPost($version, $company_id, $validation_override, $spesa_documento): \Amica\Sdk\Model\SpesaDocumento
+apiVversionCompanyIdSpesaDocumentoPost($version, $company_id, $validation_override, $idempotency_key, $spesa_documento): \Amica\Sdk\Model\SpesaDocumento
 ```
 
 Salva un nuovo elemento.
@@ -388,7 +390,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -404,10 +406,11 @@ $apiInstance = new Amica\Sdk\Api\SpesaDocumentoApi(
 $version = 'version_example'; // string | Versione API.
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
 $validation_override = True; // bool | Se applicare eventualmente l'override della validazione.
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
 $spesa_documento = new \Amica\Sdk\Model\SpesaDocumento(); // \Amica\Sdk\Model\SpesaDocumento | Istanza dell'elemento da salvare.
 
 try {
-    $result = $apiInstance->apiVversionCompanyIdSpesaDocumentoPost($version, $company_id, $validation_override, $spesa_documento);
+    $result = $apiInstance->apiVversionCompanyIdSpesaDocumentoPost($version, $company_id, $validation_override, $idempotency_key, $spesa_documento);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling SpesaDocumentoApi->apiVversionCompanyIdSpesaDocumentoPost: ', $e->getMessage(), PHP_EOL;
@@ -421,6 +424,7 @@ try {
 | **version** | **string**| Versione API. | |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
 | **validation_override** | **bool**| Se applicare eventualmente l&#39;override della validazione. | [optional] |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
 | **spesa_documento** | [**\Amica\Sdk\Model\SpesaDocumento**](../Model/SpesaDocumento.md)| Istanza dell&#39;elemento da salvare. | [optional] |
 
 ### Return type
@@ -429,7 +433,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 

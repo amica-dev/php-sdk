@@ -26,7 +26,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -63,7 +63,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -92,7 +92,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -129,7 +129,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 

@@ -29,7 +29,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 ## `apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost()`
 
 ```php
-apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost($version, $company_id, $fattura_elettronica_xml_get_archive_by_date_range_options)
+apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost($version, $company_id, $idempotency_key, $fattura_elettronica_xml_get_archive_by_date_range_options)
 ```
 
 Scarica un archivio ZIP di fatture XML, filtrate per intervallo di date.
@@ -46,7 +46,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -61,10 +61,11 @@ $apiInstance = new Amica\Sdk\Api\FatturaElettronicaXmlApi(
 );
 $version = 'version_example'; // string | Versione API.
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
 $fattura_elettronica_xml_get_archive_by_date_range_options = new \Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByDateRangeOptions(); // \Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByDateRangeOptions | Opzioni di download.
 
 try {
-    $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost($version, $company_id, $fattura_elettronica_xml_get_archive_by_date_range_options);
+    $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost($version, $company_id, $idempotency_key, $fattura_elettronica_xml_get_archive_by_date_range_options);
 } catch (Exception $e) {
     echo 'Exception when calling FatturaElettronicaXmlApi->apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost: ', $e->getMessage(), PHP_EOL;
 }
@@ -76,6 +77,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **version** | **string**| Versione API. | |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
 | **fattura_elettronica_xml_get_archive_by_date_range_options** | [**\Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByDateRangeOptions**](../Model/FatturaElettronicaXmlGetArchiveByDateRangeOptions.md)| Opzioni di download. | [optional] |
 
 ### Return type
@@ -84,7 +86,7 @@ void (empty response body)
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -98,7 +100,7 @@ void (empty response body)
 ## `apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost()`
 
 ```php
-apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost($version, $company_id, $fattura_elettronica_xml_get_archive_by_file_name_options)
+apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost($version, $company_id, $idempotency_key, $fattura_elettronica_xml_get_archive_by_file_name_options)
 ```
 
 Scarica un archivio ZIP di fatture XML, filtrate per nome file.
@@ -115,7 +117,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -130,10 +132,11 @@ $apiInstance = new Amica\Sdk\Api\FatturaElettronicaXmlApi(
 );
 $version = 'version_example'; // string | Versione API.
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
 $fattura_elettronica_xml_get_archive_by_file_name_options = new \Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByFileNameOptions(); // \Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByFileNameOptions | Opzioni di download.
 
 try {
-    $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost($version, $company_id, $fattura_elettronica_xml_get_archive_by_file_name_options);
+    $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost($version, $company_id, $idempotency_key, $fattura_elettronica_xml_get_archive_by_file_name_options);
 } catch (Exception $e) {
     echo 'Exception when calling FatturaElettronicaXmlApi->apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost: ', $e->getMessage(), PHP_EOL;
 }
@@ -145,6 +148,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **version** | **string**| Versione API. | |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
 | **fattura_elettronica_xml_get_archive_by_file_name_options** | [**\Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByFileNameOptions**](../Model/FatturaElettronicaXmlGetArchiveByFileNameOptions.md)| Opzioni di download. | [optional] |
 
 ### Return type
@@ -153,7 +157,7 @@ void (empty response body)
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -182,7 +186,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -218,7 +222,7 @@ void (empty response body)
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -247,7 +251,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -283,7 +287,7 @@ void (empty response body)
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -297,7 +301,7 @@ void (empty response body)
 ## `apiVversionCompanyIdFatturaElettronicaXmlBulkPost()`
 
 ```php
-apiVversionCompanyIdFatturaElettronicaXmlBulkPost($company_id, $version, $file)
+apiVversionCompanyIdFatturaElettronicaXmlBulkPost($company_id, $version, $idempotency_key, $file)
 ```
 
 Carica in blocco fatture XML da un archivio ZIP.
@@ -312,7 +316,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -327,10 +331,11 @@ $apiInstance = new Amica\Sdk\Api\FatturaElettronicaXmlApi(
 );
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
 $version = 'version_example'; // string
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
 $file = '/path/to/file.txt'; // \SplFileObject | Archivio ZIP contenente i file XML.
 
 try {
-    $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlBulkPost($company_id, $version, $file);
+    $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlBulkPost($company_id, $version, $idempotency_key, $file);
 } catch (Exception $e) {
     echo 'Exception when calling FatturaElettronicaXmlApi->apiVversionCompanyIdFatturaElettronicaXmlBulkPost: ', $e->getMessage(), PHP_EOL;
 }
@@ -342,6 +347,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
 | **version** | **string**|  | |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
 | **file** | **\SplFileObject****\SplFileObject**| Archivio ZIP contenente i file XML. | [optional] |
 
 ### Return type
@@ -350,7 +356,7 @@ void (empty response body)
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -364,7 +370,7 @@ void (empty response body)
 ## `apiVversionCompanyIdFatturaElettronicaXmlExportPost()`
 
 ```php
-apiVversionCompanyIdFatturaElettronicaXmlExportPost($version, $company_id, $validation_override, $fattura_elettronica_export_options): \Amica\Sdk\Model\FatturaElettronicaExportResult
+apiVversionCompanyIdFatturaElettronicaXmlExportPost($version, $company_id, $validation_override, $idempotency_key, $fattura_elettronica_export_options): \Amica\Sdk\Model\FatturaElettronicaExportResult
 ```
 
 Esporta uno o più documenti in una fattura XML.
@@ -381,7 +387,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -397,10 +403,11 @@ $apiInstance = new Amica\Sdk\Api\FatturaElettronicaXmlApi(
 $version = 'version_example'; // string | Versione API.
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
 $validation_override = True; // bool | Se applicare eventualmente l'override della validazione.
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
 $fattura_elettronica_export_options = new \Amica\Sdk\Model\FatturaElettronicaExportOptions(); // \Amica\Sdk\Model\FatturaElettronicaExportOptions | Opzioni di esportazione.
 
 try {
-    $result = $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlExportPost($version, $company_id, $validation_override, $fattura_elettronica_export_options);
+    $result = $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlExportPost($version, $company_id, $validation_override, $idempotency_key, $fattura_elettronica_export_options);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling FatturaElettronicaXmlApi->apiVversionCompanyIdFatturaElettronicaXmlExportPost: ', $e->getMessage(), PHP_EOL;
@@ -414,6 +421,7 @@ try {
 | **version** | **string**| Versione API. | |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
 | **validation_override** | **bool**| Se applicare eventualmente l&#39;override della validazione. | [optional] |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
 | **fattura_elettronica_export_options** | [**\Amica\Sdk\Model\FatturaElettronicaExportOptions**](../Model/FatturaElettronicaExportOptions.md)| Opzioni di esportazione. | [optional] |
 
 ### Return type
@@ -422,7 +430,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -451,7 +459,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -490,7 +498,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -519,7 +527,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -557,7 +565,7 @@ void (empty response body)
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -588,7 +596,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -637,7 +645,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -666,7 +674,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -705,7 +713,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -734,7 +742,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -775,7 +783,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -789,7 +797,7 @@ try {
 ## `apiVversionCompanyIdFatturaElettronicaXmlIdPut()`
 
 ```php
-apiVversionCompanyIdFatturaElettronicaXmlIdPut($version, $company_id, $id, $validation_override, $fattura_elettronica_xml): \Amica\Sdk\Model\FatturaElettronicaXml
+apiVversionCompanyIdFatturaElettronicaXmlIdPut($version, $company_id, $id, $validation_override, $idempotency_key, $fattura_elettronica_xml): \Amica\Sdk\Model\FatturaElettronicaXml
 ```
 
 Aggiorna un elemento esistente.
@@ -804,7 +812,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -821,10 +829,11 @@ $version = 'version_example'; // string | Versione API.
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
 $id = 56; // int | ID univoco dell'elemento da aggiornare.
 $validation_override = True; // bool | Se applicare eventualmente l'override della validazione.
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
 $fattura_elettronica_xml = new \Amica\Sdk\Model\FatturaElettronicaXml(); // \Amica\Sdk\Model\FatturaElettronicaXml | Istanza dell'elemento da salvare.
 
 try {
-    $result = $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlIdPut($version, $company_id, $id, $validation_override, $fattura_elettronica_xml);
+    $result = $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlIdPut($version, $company_id, $id, $validation_override, $idempotency_key, $fattura_elettronica_xml);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling FatturaElettronicaXmlApi->apiVversionCompanyIdFatturaElettronicaXmlIdPut: ', $e->getMessage(), PHP_EOL;
@@ -839,6 +848,7 @@ try {
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
 | **id** | **int**| ID univoco dell&#39;elemento da aggiornare. | |
 | **validation_override** | **bool**| Se applicare eventualmente l&#39;override della validazione. | [optional] |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
 | **fattura_elettronica_xml** | [**\Amica\Sdk\Model\FatturaElettronicaXml**](../Model/FatturaElettronicaXml.md)| Istanza dell&#39;elemento da salvare. | [optional] |
 
 ### Return type
@@ -847,7 +857,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -861,7 +871,7 @@ try {
 ## `apiVversionCompanyIdFatturaElettronicaXmlImportPost()`
 
 ```php
-apiVversionCompanyIdFatturaElettronicaXmlImportPost($version, $company_id, $data_consegna_sdi, $identificativo_sdi, $file): \Amica\Sdk\Model\FatturaElettronicaImportResult[]
+apiVversionCompanyIdFatturaElettronicaXmlImportPost($version, $company_id, $idempotency_key, $data_consegna_sdi, $identificativo_sdi, $file): \Amica\Sdk\Model\FatturaElettronicaImportResult[]
 ```
 
 Importa una fattura XML.
@@ -878,7 +888,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -893,12 +903,13 @@ $apiInstance = new Amica\Sdk\Api\FatturaElettronicaXmlApi(
 );
 $version = 'version_example'; // string | Versione API.
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
 $data_consegna_sdi = new \DateTime('2013-10-20T19:20:30+01:00'); // \DateTime | Data di consegna del Sistema di Interscambio (SdI).
 $identificativo_sdi = 'identificativo_sdi_example'; // string | Identificativo assegnato dal Sistema di Interscambio (SdI).
 $file = '/path/to/file.txt'; // \SplFileObject | Contenuto del file.
 
 try {
-    $result = $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlImportPost($version, $company_id, $data_consegna_sdi, $identificativo_sdi, $file);
+    $result = $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlImportPost($version, $company_id, $idempotency_key, $data_consegna_sdi, $identificativo_sdi, $file);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling FatturaElettronicaXmlApi->apiVversionCompanyIdFatturaElettronicaXmlImportPost: ', $e->getMessage(), PHP_EOL;
@@ -911,6 +922,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **version** | **string**| Versione API. | |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
 | **data_consegna_sdi** | **\DateTime**| Data di consegna del Sistema di Interscambio (SdI). | [optional] |
 | **identificativo_sdi** | **string**| Identificativo assegnato dal Sistema di Interscambio (SdI). | [optional] |
 | **file** | **\SplFileObject****\SplFileObject**| Contenuto del file. | [optional] |
@@ -921,7 +933,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -950,7 +962,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -987,7 +999,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -1001,7 +1013,7 @@ try {
 ## `apiVversionCompanyIdFatturaElettronicaXmlPairPost()`
 
 ```php
-apiVversionCompanyIdFatturaElettronicaXmlPairPost($version, $company_id, $file_name, $progressivo, $documento_id, $file)
+apiVversionCompanyIdFatturaElettronicaXmlPairPost($version, $company_id, $idempotency_key, $file_name, $progressivo, $documento_id, $file)
 ```
 
 Associa una fattura XML a un documento esistente.
@@ -1016,7 +1028,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -1031,13 +1043,14 @@ $apiInstance = new Amica\Sdk\Api\FatturaElettronicaXmlApi(
 );
 $version = 'version_example'; // string | Versione API.
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
 $file_name = 'file_name_example'; // string | Nome del file.
 $progressivo = 'progressivo_example'; // string | Progressivo del Sistema di Interscambio (SdI).
 $documento_id = 56; // int | Identificativo del Amica.Documento da abbinare.
 $file = '/path/to/file.txt'; // \SplFileObject | Contenuto del file.
 
 try {
-    $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlPairPost($version, $company_id, $file_name, $progressivo, $documento_id, $file);
+    $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlPairPost($version, $company_id, $idempotency_key, $file_name, $progressivo, $documento_id, $file);
 } catch (Exception $e) {
     echo 'Exception when calling FatturaElettronicaXmlApi->apiVversionCompanyIdFatturaElettronicaXmlPairPost: ', $e->getMessage(), PHP_EOL;
 }
@@ -1049,6 +1062,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **version** | **string**| Versione API. | |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
 | **file_name** | **string**| Nome del file. | [optional] |
 | **progressivo** | **string**| Progressivo del Sistema di Interscambio (SdI). | [optional] |
 | **documento_id** | **int**| Identificativo del Amica.Documento da abbinare. | [optional] |
@@ -1060,7 +1074,7 @@ void (empty response body)
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -1074,7 +1088,7 @@ void (empty response body)
 ## `apiVversionCompanyIdFatturaElettronicaXmlPost()`
 
 ```php
-apiVversionCompanyIdFatturaElettronicaXmlPost($version, $company_id, $validation_override, $fattura_elettronica_xml): \Amica\Sdk\Model\FatturaElettronicaXml
+apiVversionCompanyIdFatturaElettronicaXmlPost($version, $company_id, $validation_override, $idempotency_key, $fattura_elettronica_xml): \Amica\Sdk\Model\FatturaElettronicaXml
 ```
 
 Salva un nuovo elemento.
@@ -1089,7 +1103,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -1105,10 +1119,11 @@ $apiInstance = new Amica\Sdk\Api\FatturaElettronicaXmlApi(
 $version = 'version_example'; // string | Versione API.
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
 $validation_override = True; // bool | Se applicare eventualmente l'override della validazione.
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
 $fattura_elettronica_xml = new \Amica\Sdk\Model\FatturaElettronicaXml(); // \Amica\Sdk\Model\FatturaElettronicaXml | Istanza dell'elemento da salvare.
 
 try {
-    $result = $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlPost($version, $company_id, $validation_override, $fattura_elettronica_xml);
+    $result = $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlPost($version, $company_id, $validation_override, $idempotency_key, $fattura_elettronica_xml);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling FatturaElettronicaXmlApi->apiVversionCompanyIdFatturaElettronicaXmlPost: ', $e->getMessage(), PHP_EOL;
@@ -1122,6 +1137,7 @@ try {
 | **version** | **string**| Versione API. | |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
 | **validation_override** | **bool**| Se applicare eventualmente l&#39;override della validazione. | [optional] |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
 | **fattura_elettronica_xml** | [**\Amica\Sdk\Model\FatturaElettronicaXml**](../Model/FatturaElettronicaXml.md)| Istanza dell&#39;elemento da salvare. | [optional] |
 
 ### Return type
@@ -1130,7 +1146,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -1144,7 +1160,7 @@ try {
 ## `apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost()`
 
 ```php
-apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost($version, $company_id): \Amica\Sdk\Model\FatturaElettronicaImportResult[]
+apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost($version, $company_id, $idempotency_key): \Amica\Sdk\Model\FatturaElettronicaImportResult[]
 ```
 
 Interroga il Sistema di Interscambio (SDI) e scarica gli esiti di invio delle fatture precedentemente caricate.
@@ -1159,7 +1175,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -1174,9 +1190,10 @@ $apiInstance = new Amica\Sdk\Api\FatturaElettronicaXmlApi(
 );
 $version = 'version_example'; // string | Versione API.
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
 
 try {
-    $result = $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost($version, $company_id);
+    $result = $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost($version, $company_id, $idempotency_key);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling FatturaElettronicaXmlApi->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost: ', $e->getMessage(), PHP_EOL;
@@ -1189,6 +1206,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **version** | **string**| Versione API. | |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
 
 ### Return type
 
@@ -1196,7 +1214,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -1210,7 +1228,7 @@ try {
 ## `apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost()`
 
 ```php
-apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost($version, $company_id): \Amica\Sdk\Model\FatturaElettronicaImportResult[]
+apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost($version, $company_id, $idempotency_key): \Amica\Sdk\Model\FatturaElettronicaImportResult[]
 ```
 
 Scarica le nuove fatture dal Sistema di Interscambio (SDI).
@@ -1227,7 +1245,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -1242,9 +1260,10 @@ $apiInstance = new Amica\Sdk\Api\FatturaElettronicaXmlApi(
 );
 $version = 'version_example'; // string | Versione API.
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
 
 try {
-    $result = $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost($version, $company_id);
+    $result = $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost($version, $company_id, $idempotency_key);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling FatturaElettronicaXmlApi->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost: ', $e->getMessage(), PHP_EOL;
@@ -1257,6 +1276,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **version** | **string**| Versione API. | |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
 
 ### Return type
 
@@ -1264,7 +1284,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -1278,7 +1298,7 @@ try {
 ## `apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost()`
 
 ```php
-apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost($version, $company_id, $fattura_elettronica_upload_options): \Amica\Sdk\Model\FatturaElettronicaUploadResult
+apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost($version, $company_id, $idempotency_key, $fattura_elettronica_upload_options): \Amica\Sdk\Model\FatturaElettronicaUploadResult
 ```
 
 Invia una o più fatture al Sistema di Interscambio (SDI).
@@ -1295,7 +1315,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -1310,10 +1330,11 @@ $apiInstance = new Amica\Sdk\Api\FatturaElettronicaXmlApi(
 );
 $version = 'version_example'; // string | Versione API.
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
 $fattura_elettronica_upload_options = new \Amica\Sdk\Model\FatturaElettronicaUploadOptions(); // \Amica\Sdk\Model\FatturaElettronicaUploadOptions | Opzioni di invio.
 
 try {
-    $result = $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost($version, $company_id, $fattura_elettronica_upload_options);
+    $result = $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost($version, $company_id, $idempotency_key, $fattura_elettronica_upload_options);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling FatturaElettronicaXmlApi->apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost: ', $e->getMessage(), PHP_EOL;
@@ -1326,6 +1347,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **version** | **string**| Versione API. | |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
 | **fattura_elettronica_upload_options** | [**\Amica\Sdk\Model\FatturaElettronicaUploadOptions**](../Model/FatturaElettronicaUploadOptions.md)| Opzioni di invio. | [optional] |
 
 ### Return type
@@ -1334,7 +1356,7 @@ try {
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 
@@ -1348,7 +1370,7 @@ try {
 ## `apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost()`
 
 ```php
-apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost($version, $company_id, $fattura_elettronica_xml_style_sheet_data)
+apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost($version, $company_id, $idempotency_key, $fattura_elettronica_xml_style_sheet_data)
 ```
 
 Applica un foglio di stile CSS a una fattura XML esistente e restituisce il risultato.
@@ -1363,7 +1385,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 // Configure Bearer (JWT) authorization: bearer
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-// Configure OAuth2 access token for authorization: oauth2
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
 $config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 // Configure OAuth2 access token for authorization: oauth2
@@ -1378,10 +1400,11 @@ $apiInstance = new Amica\Sdk\Api\FatturaElettronicaXmlApi(
 );
 $version = 'version_example'; // string | Versione API.
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
 $fattura_elettronica_xml_style_sheet_data = new \Amica\Sdk\Model\FatturaElettronicaXmlStyleSheetData(); // \Amica\Sdk\Model\FatturaElettronicaXmlStyleSheetData | Opzioni di corrispondenza e stile.
 
 try {
-    $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost($version, $company_id, $fattura_elettronica_xml_style_sheet_data);
+    $apiInstance->apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost($version, $company_id, $idempotency_key, $fattura_elettronica_xml_style_sheet_data);
 } catch (Exception $e) {
     echo 'Exception when calling FatturaElettronicaXmlApi->apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost: ', $e->getMessage(), PHP_EOL;
 }
@@ -1393,6 +1416,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **version** | **string**| Versione API. | |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
 | **fattura_elettronica_xml_style_sheet_data** | [**\Amica\Sdk\Model\FatturaElettronicaXmlStyleSheetData**](../Model/FatturaElettronicaXmlStyleSheetData.md)| Opzioni di corrispondenza e stile. | [optional] |
 
 ### Return type
@@ -1401,7 +1425,7 @@ void (empty response body)
 
 ### Authorization
 
-[bearer](../../README.md#bearer), [oauth2](../../README.md#oauth2), [oauth2](../../README.md#oauth2)
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
 
 ### HTTP request headers
 

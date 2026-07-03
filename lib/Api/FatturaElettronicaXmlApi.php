@@ -12,7 +12,7 @@
 /**
  * Amica Cloud API
  *
- * L'Amica Cloud API fornisce accesso programmatico a tutti i dati aziendali gestiti da [Amica 20](https://gestionaleamica.com). Supporta il ciclo completo di documenti, fatture, magazzino, contabilità e anagrafiche. Per guide e documentazione completa, visitare [amica.dev](https://amica.dev/).  ## Autenticazione  Tutte le richieste API richiedono un token OAuth 2.0 Bearer valido, da includere nell'header `Authorization`:  ``` Authorization: Bearer <token> ```  ### Registra la tua app  Per integrare l'Amica Cloud API registra la tua applicazione sull'**App Store di Amica**. Al termine della registrazione ottieni una coppia di credenziali OAuth 2.0 — `client_id` e `client_secret` (il secret è mostrato **una sola volta**) — e scegli gli **scope** e il **flusso di autenticazione** desiderati.  ### Scegli il flusso  - **Authorization Code con PKCE** (consigliato per app che operano per conto di un utente Amica): l'utente autorizza la tua app tramite la pagina di consenso dell'identity provider; la tua app riceve un `code` da scambiare con un access token.    ```   GET  {identity-provider}/connect/authorize?response_type=code&client_id=<client_id>&redirect_uri=<redirect_uri>&scope=openid%20read%20write%20documenti&code_challenge=<challenge>&code_challenge_method=S256   POST {identity-provider}/connect/token        grant_type=authorization_code&code=<code>&code_verifier=<verifier>&client_id=<client_id>&client_secret=<client_secret>&redirect_uri=<redirect_uri>   ```  - **Client Credentials** (per integrazioni server-to-server, senza utente interattivo):    ```   POST {identity-provider}/connect/token   Content-Type: application/x-www-form-urlencoded    grant_type=client_credentials&client_id=<client_id>&client_secret=<client_secret>&scope=read write documenti contabilita   ```    > **Nota:** il flusso Client Credentials è disponibile solo per le **app private**, non per quelle pubblicate sul marketplace.  In entrambi i casi la risposta contiene l'`access_token` (JWT con `aud: amica-cloud`) da usare nelle chiamate successive finché non scade (`expires_in`), dopodiché va richiesto un nuovo token. Ogni token contiene uno o più **scope** che determinano le aree accessibili (vedi sotto). Dalla [API Reference](https://amica.dev) è possibile incollare un access token per provare gli endpoint direttamente dal browser.  ## Scope di autorizzazione  L'accesso agli endpoint è governato dagli scope presenti nel token OAuth:  | Scope | Descrizione | |-|-| | `comune` | Anagrafiche: contatti, indirizzi, nazioni, valute, modalità di pagamento, ecc. | | `magazzino` | Magazzino: articoli, listini, movimenti di magazzino, giacenze, distinte base. | | `contabilita` | Contabilità: registrazioni contabili, scadenze, castelletti IVA, fatture elettroniche XML. | | `documenti` | Documenti: fatture, note di credito, DDT, ordini, preventivi, proforma ed emissione. |  Una richiesta verso un endpoint non coperto dallo scope del token riceverà una risposta `403 Forbidden`.  ## Company ID  La maggior parte degli endpoint è relativa a una specifica azienda e segue il pattern:  ``` /api/v3/{companyId}/risorsa ```  Il `companyId` è l'identificativo univoco di ciascun database aziendale. Usare l'endpoint `GET /api/v3/config/Azienda` per ottenere l'elenco delle aziende disponibili.  ## Paginazione  Gli endpoint che restituiscono liste supportano la paginazione tramite query parameter:  | Parametro | Descrizione | |-|-| | `Skip` | Numero di elementi da saltare dall'inizio del set di risultati. | | `Take` | Numero di elementi da includere nella risposta. |  La risposta include due header:  | Header | Descrizione | |-|-| | `X-Read-TotalCount` | Numero totale di elementi che soddisfano il filtro corrente. | | `X-Read-Count` | Numero di elementi effettivamente restituiti nel body della risposta. |  ## Ordinamento e filtri  Gli endpoint lista accettano parametri aggiuntivi:  | Parametro | Descrizione | |-|-| | `Order` | Lista di proprietà per l'ordinamento, separate da virgola. Un segno meno (`-`) prima del nome indica ordine discendente. Es. `-RagioneSociale1,Citta`. | | `Filter` | Condizioni di ricerca: lista di espressioni separate da virgola, ciascuna formata da nome campo, operatore, valore ed eventuale connettore logico. Operatori: `$eq`, `$ne`, `$gt`, `$lt`, `$lte`, `$gte`, `$ct` (contiene), `$nct`, `$sw` (inizia con), `$ew` (finisce con). Connettori: `$and` (default, omissibile) e `$or`; le sotto-query si racchiudono tra `[]`. Es. `RagioneSociale1 $ct acme $or, Fido $gt 1000`. | | `SkipTotalCount` | Se `true`, l'header `X-Read-TotalCount` viene omesso dalla risposta: migliori prestazioni a scapito del conteggio totale. Default `false`. |  ## Espansione oggetti correlati  Gli endpoint singoli e lista supportano il parametro `Expand`. Quando fornito, gli oggetti correlati vengono inclusi inline nella risposta anziché restituiti come riferimenti. È possibile specificare espansioni multiple separate da virgola.  ## Gestione errori  L'API usa codici di stato HTTP standard e restituisce [RFC 7807](https://tools.ietf.org/html/rfc7807) Problem Details in caso di errore:  | Codice | Significato | |-|-| | `400` | Bad Request — validazione fallita o parametro obbligatorio mancante. | | `401` | Unauthorized — token mancante o scaduto. | | `403` | Forbidden — il token non possiede lo scope richiesto. | | `404` | Not Found — la risorsa richiesta non esiste. | | `409` | Conflict — conflitto di concorrenza. | | `422` | Unprocessable Entity — entità non processabile (es. token di concorrenza obsoleto). |  Alcune risposte `400` includono un campo `overridable` che indica se l'errore di validazione può essere ignorato impostando il parametro `validationOverride` a `true`.  ## Controllo della concorrenza  Le entità contengono una proprietà `ConcurrencyToken`. Quando si aggiorna un'entità tramite `PUT`, il token nel body della richiesta viene confrontato con il valore memorizzato. Se differiscono, viene restituito un `422 Unprocessable Entity`. Usare sempre l'ultimo token ricevuto da una risposta `GET` o `POST`.
+ * L'Amica Cloud API fornisce accesso programmatico a tutti i dati aziendali gestiti da [Amica 20](https://gestionaleamica.com). Supporta il ciclo completo di documenti, fatture, magazzino, contabilità e anagrafiche. Per guide e documentazione completa, visitare [amica.dev](https://amica.dev/).  ## Autenticazione  Tutte le richieste API richiedono un token OAuth 2.0 Bearer valido, da includere nell'header `Authorization`:  ``` Authorization: Bearer <token> ```  ### Registra la tua app  Per integrare l'Amica Cloud API registra la tua applicazione sull'[**App Store di Amica**](https://apps.amica20.it). Al termine della registrazione ottieni una coppia di credenziali OAuth 2.0 — `client_id` e `client_secret` (il secret è mostrato **una sola volta**) — e scegli gli **scope** e il **flusso di autenticazione** desiderati.  ### Scegli il flusso  La scelta dipende da **come** la tua applicazione si autentica:  - C'è un **utente** che può accedere via browser (web app, SPA, app mobile)? → **Authorization Code con PKCE**. - È un **servizio headless** (backend, batch, integrazione server-to-server) di una **singola azienda**, senza un utente che effettua il login? → **Client Credentials**.  #### Authorization Code con PKCE  Consigliato per le app che operano per conto di un utente Amica ed è l'**unico flusso disponibile per le app pubblicate sul marketplace**. Una sola registrazione serve un numero qualsiasi di aziende: ogni utente autorizza la tua app per la propria azienda tramite la pagina di consenso dell'identity provider, e il token riceve automaticamente il contesto di quell'azienda. La tua app riceve un `code` da scambiare con un access token.  ``` GET  {identity-provider}/connect/authorize?response_type=code&client_id=<client_id>&redirect_uri=<redirect_uri>&scope=openid%20read%20write%20documenti&code_challenge=<challenge>&code_challenge_method=S256 POST {identity-provider}/connect/token      grant_type=authorization_code&code=<code>&code_verifier=<verifier>&client_id=<client_id>&client_secret=<client_secret>&redirect_uri=<redirect_uri> ```  #### Client Credentials  Per integrazioni **server-to-server** senza utente interattivo. Disponibile solo per le **app private**, non per quelle pubblicate sul marketplace. Un'app Client Credentials è **legata a una singola azienda** — quella dell'utente che la registra — e il token ne riceve automaticamente il contesto. Per servire un'azienda diversa serve una registrazione separata; se devi distribuire la stessa app a più aziende usa invece **Authorization Code**.  ``` POST {identity-provider}/connect/token Content-Type: application/x-www-form-urlencoded  grant_type=client_credentials&client_id=<client_id>&client_secret=<client_secret>&scope=comune read write documenti ```  > **Importante:** non includere lo scope `openid` (né `profile`/`email`) in questo flusso. `openid` attiva OpenID Connect — richiede un utente che effettua il login e l'emissione di un ID token — cosa che un flusso server-to-server non prevede: la richiesta viene rifiutata con l'errore `Client cannot request OpenID scopes in client credentials flow`. Indica solo gli scope di risorsa (`comune`, `magazzino`, `documenti`, `contabilita`, ed eventualmente `read`/`write`).  In entrambi i casi la risposta contiene l'`access_token` (JWT con `aud: amica-cloud`) da usare nelle chiamate successive finché non scade (`expires_in`), dopodiché va richiesto un nuovo token. Ogni token contiene uno o più **scope** che determinano le aree accessibili (vedi sotto). Dalla [API Reference](https://amica.dev) è possibile incollare un access token per provare gli endpoint direttamente dal browser.  ## Scope di autorizzazione  L'accesso agli endpoint è governato dagli scope presenti nel token OAuth:  | Scope | Descrizione | |-|-| | `comune` | Anagrafiche: contatti, indirizzi, nazioni, valute, modalità di pagamento, ecc. | | `magazzino` | Magazzino: articoli, listini, movimenti di magazzino, giacenze, distinte base. | | `contabilita` | Contabilità: registrazioni contabili, scadenze, castelletti IVA, fatture elettroniche XML. | | `documenti` | Documenti: fatture, note di credito, DDT, ordini, preventivi, proforma ed emissione. |  Una richiesta verso un endpoint non coperto dallo scope del token riceverà una risposta `403 Forbidden`.  ## Company ID  La maggior parte degli endpoint è relativa a una specifica azienda e segue il pattern:  ``` /api/v3/{companyId}/risorsa ```  Il `companyId` è l'identificativo univoco di ciascun database aziendale. Usare l'endpoint `GET /api/v3/config/Azienda` per ottenere l'elenco delle aziende disponibili.  ## Paginazione  Gli endpoint che restituiscono liste supportano la paginazione tramite query parameter:  | Parametro | Descrizione | |-|-| | `Skip` | Numero di elementi da saltare dall'inizio del set di risultati. | | `Take` | Numero di elementi da includere nella risposta. |  La risposta include due header:  | Header | Descrizione | |-|-| | `X-Read-TotalCount` | Numero totale di elementi che soddisfano il filtro corrente. | | `X-Read-Count` | Numero di elementi effettivamente restituiti nel body della risposta. |  ## Ordinamento e filtri  Gli endpoint lista accettano parametri aggiuntivi:  | Parametro | Descrizione | |-|-| | `Order` | Lista di proprietà per l'ordinamento, separate da virgola. Un segno meno (`-`) prima del nome indica ordine discendente. Es. `-RagioneSociale1,Citta`. | | `Filter` | Condizioni di ricerca: lista di espressioni separate da virgola, ciascuna formata da nome campo, operatore, valore ed eventuale connettore logico. Operatori: `$eq`, `$ne`, `$gt`, `$lt`, `$lte`, `$gte`, `$ct` (contiene), `$nct`, `$sw` (inizia con), `$ew` (finisce con). Connettori: `$and` (default, omissibile) e `$or`; le sotto-query si racchiudono tra `[]`. Es. `RagioneSociale1 $ct acme $or, Fido $gt 1000`. | | `SkipTotalCount` | Se `true`, l'header `X-Read-TotalCount` viene omesso dalla risposta: migliori prestazioni a scapito del conteggio totale. Default `false`. |  ## Espansione oggetti correlati  Gli endpoint singoli e lista supportano il parametro `Expand`. Quando fornito, gli oggetti correlati vengono inclusi inline nella risposta anziché restituiti come riferimenti. È possibile specificare espansioni multiple separate da virgola.  ## Gestione errori  L'API usa codici di stato HTTP standard e restituisce [RFC 7807](https://tools.ietf.org/html/rfc7807) Problem Details in caso di errore:  | Codice | Significato | |-|-| | `400` | Bad Request — validazione fallita o parametro obbligatorio mancante. | | `401` | Unauthorized — token mancante o scaduto. | | `403` | Forbidden — il token non possiede lo scope richiesto. | | `404` | Not Found — la risorsa richiesta non esiste. | | `409` | Conflict — conflitto di concorrenza. | | `422` | Unprocessable Entity — entità non processabile (es. token di concorrenza obsoleto). |  Alcune risposte `400` includono un campo `overridable` che indica se l'errore di validazione può essere ignorato impostando il parametro `validationOverride` a `true`.  ## Controllo della concorrenza  Le entità contengono una proprietà `ConcurrencyToken`. Quando si aggiorna un'entità tramite `PUT`, il token nel body della richiesta viene confrontato con il valore memorizzato. Se differiscono, viene restituito un `422 Unprocessable Entity`. Usare sempre l'ultimo token ricevuto da una risposta `GET` o `POST`.
  *
  * The version of the OpenAPI document: v3
  * Contact: assistenza@gestionaleamica.com
@@ -201,6 +201,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByDateRangeOptions|null $fattura_elettronica_xml_get_archive_by_date_range_options Opzioni di download. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost'] to see the possible values for this operation
      *
@@ -208,9 +209,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost($version, $company_id, $fattura_elettronica_xml_get_archive_by_date_range_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost($version, $company_id, $idempotency_key = null, $fattura_elettronica_xml_get_archive_by_date_range_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost'][0])
     {
-        $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostWithHttpInfo($version, $company_id, $fattura_elettronica_xml_get_archive_by_date_range_options, $contentType);
+        $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostWithHttpInfo($version, $company_id, $idempotency_key, $fattura_elettronica_xml_get_archive_by_date_range_options, $contentType);
     }
 
     /**
@@ -220,6 +221,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByDateRangeOptions|null $fattura_elettronica_xml_get_archive_by_date_range_options Opzioni di download. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost'] to see the possible values for this operation
      *
@@ -227,9 +229,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostWithHttpInfo($version, $company_id, $fattura_elettronica_xml_get_archive_by_date_range_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostWithHttpInfo($version, $company_id, $idempotency_key = null, $fattura_elettronica_xml_get_archive_by_date_range_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost'][0])
     {
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostRequest($version, $company_id, $fattura_elettronica_xml_get_archive_by_date_range_options, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostRequest($version, $company_id, $idempotency_key, $fattura_elettronica_xml_get_archive_by_date_range_options, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -278,15 +280,16 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByDateRangeOptions|null $fattura_elettronica_xml_get_archive_by_date_range_options Opzioni di download. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostAsync($version, $company_id, $fattura_elettronica_xml_get_archive_by_date_range_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostAsync($version, $company_id, $idempotency_key = null, $fattura_elettronica_xml_get_archive_by_date_range_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost'][0])
     {
-        return $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostAsyncWithHttpInfo($version, $company_id, $fattura_elettronica_xml_get_archive_by_date_range_options, $contentType)
+        return $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostAsyncWithHttpInfo($version, $company_id, $idempotency_key, $fattura_elettronica_xml_get_archive_by_date_range_options, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -301,16 +304,17 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByDateRangeOptions|null $fattura_elettronica_xml_get_archive_by_date_range_options Opzioni di download. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostAsyncWithHttpInfo($version, $company_id, $fattura_elettronica_xml_get_archive_by_date_range_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostAsyncWithHttpInfo($version, $company_id, $idempotency_key = null, $fattura_elettronica_xml_get_archive_by_date_range_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost'][0])
     {
         $returnType = '';
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostRequest($version, $company_id, $fattura_elettronica_xml_get_archive_by_date_range_options, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostRequest($version, $company_id, $idempotency_key, $fattura_elettronica_xml_get_archive_by_date_range_options, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -340,13 +344,14 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByDateRangeOptions|null $fattura_elettronica_xml_get_archive_by_date_range_options Opzioni di download. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostRequest($version, $company_id, $fattura_elettronica_xml_get_archive_by_date_range_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePostRequest($version, $company_id, $idempotency_key = null, $fattura_elettronica_xml_get_archive_by_date_range_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebydaterangePost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -365,6 +370,7 @@ class FatturaElettronicaXmlApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/FatturaElettronicaXml/archivebydaterange';
         $formParams = [];
         $queryParams = [];
@@ -373,6 +379,10 @@ class FatturaElettronicaXmlApi
         $multipart = false;
 
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -471,6 +481,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByFileNameOptions|null $fattura_elettronica_xml_get_archive_by_file_name_options Opzioni di download. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost'] to see the possible values for this operation
      *
@@ -478,9 +489,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost($version, $company_id, $fattura_elettronica_xml_get_archive_by_file_name_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost($version, $company_id, $idempotency_key = null, $fattura_elettronica_xml_get_archive_by_file_name_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost'][0])
     {
-        $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostWithHttpInfo($version, $company_id, $fattura_elettronica_xml_get_archive_by_file_name_options, $contentType);
+        $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostWithHttpInfo($version, $company_id, $idempotency_key, $fattura_elettronica_xml_get_archive_by_file_name_options, $contentType);
     }
 
     /**
@@ -490,6 +501,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByFileNameOptions|null $fattura_elettronica_xml_get_archive_by_file_name_options Opzioni di download. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost'] to see the possible values for this operation
      *
@@ -497,9 +509,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostWithHttpInfo($version, $company_id, $fattura_elettronica_xml_get_archive_by_file_name_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostWithHttpInfo($version, $company_id, $idempotency_key = null, $fattura_elettronica_xml_get_archive_by_file_name_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost'][0])
     {
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostRequest($version, $company_id, $fattura_elettronica_xml_get_archive_by_file_name_options, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostRequest($version, $company_id, $idempotency_key, $fattura_elettronica_xml_get_archive_by_file_name_options, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -548,15 +560,16 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByFileNameOptions|null $fattura_elettronica_xml_get_archive_by_file_name_options Opzioni di download. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostAsync($version, $company_id, $fattura_elettronica_xml_get_archive_by_file_name_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostAsync($version, $company_id, $idempotency_key = null, $fattura_elettronica_xml_get_archive_by_file_name_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost'][0])
     {
-        return $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostAsyncWithHttpInfo($version, $company_id, $fattura_elettronica_xml_get_archive_by_file_name_options, $contentType)
+        return $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostAsyncWithHttpInfo($version, $company_id, $idempotency_key, $fattura_elettronica_xml_get_archive_by_file_name_options, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -571,16 +584,17 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByFileNameOptions|null $fattura_elettronica_xml_get_archive_by_file_name_options Opzioni di download. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostAsyncWithHttpInfo($version, $company_id, $fattura_elettronica_xml_get_archive_by_file_name_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostAsyncWithHttpInfo($version, $company_id, $idempotency_key = null, $fattura_elettronica_xml_get_archive_by_file_name_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost'][0])
     {
         $returnType = '';
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostRequest($version, $company_id, $fattura_elettronica_xml_get_archive_by_file_name_options, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostRequest($version, $company_id, $idempotency_key, $fattura_elettronica_xml_get_archive_by_file_name_options, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -610,13 +624,14 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXmlGetArchiveByFileNameOptions|null $fattura_elettronica_xml_get_archive_by_file_name_options Opzioni di download. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostRequest($version, $company_id, $fattura_elettronica_xml_get_archive_by_file_name_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePostRequest($version, $company_id, $idempotency_key = null, $fattura_elettronica_xml_get_archive_by_file_name_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlArchivebyfilenamePost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -635,6 +650,7 @@ class FatturaElettronicaXmlApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/FatturaElettronicaXml/archivebyfilename';
         $formParams = [];
         $queryParams = [];
@@ -643,6 +659,10 @@ class FatturaElettronicaXmlApi
         $multipart = false;
 
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -1255,6 +1275,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  string $version version (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \SplFileObject|null $file Archivio ZIP contenente i file XML. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlBulkPost'] to see the possible values for this operation
      *
@@ -1262,9 +1283,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlBulkPost($company_id, $version, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlBulkPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlBulkPost($company_id, $version, $idempotency_key = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlBulkPost'][0])
     {
-        $this->apiVversionCompanyIdFatturaElettronicaXmlBulkPostWithHttpInfo($company_id, $version, $file, $contentType);
+        $this->apiVversionCompanyIdFatturaElettronicaXmlBulkPostWithHttpInfo($company_id, $version, $idempotency_key, $file, $contentType);
     }
 
     /**
@@ -1274,6 +1295,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  string $version (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \SplFileObject|null $file Archivio ZIP contenente i file XML. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlBulkPost'] to see the possible values for this operation
      *
@@ -1281,9 +1303,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlBulkPostWithHttpInfo($company_id, $version, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlBulkPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlBulkPostWithHttpInfo($company_id, $version, $idempotency_key = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlBulkPost'][0])
     {
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlBulkPostRequest($company_id, $version, $file, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlBulkPostRequest($company_id, $version, $idempotency_key, $file, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -1332,15 +1354,16 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  string $version (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \SplFileObject|null $file Archivio ZIP contenente i file XML. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlBulkPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlBulkPostAsync($company_id, $version, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlBulkPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlBulkPostAsync($company_id, $version, $idempotency_key = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlBulkPost'][0])
     {
-        return $this->apiVversionCompanyIdFatturaElettronicaXmlBulkPostAsyncWithHttpInfo($company_id, $version, $file, $contentType)
+        return $this->apiVversionCompanyIdFatturaElettronicaXmlBulkPostAsyncWithHttpInfo($company_id, $version, $idempotency_key, $file, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -1355,16 +1378,17 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  string $version (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \SplFileObject|null $file Archivio ZIP contenente i file XML. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlBulkPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlBulkPostAsyncWithHttpInfo($company_id, $version, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlBulkPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlBulkPostAsyncWithHttpInfo($company_id, $version, $idempotency_key = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlBulkPost'][0])
     {
         $returnType = '';
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlBulkPostRequest($company_id, $version, $file, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlBulkPostRequest($company_id, $version, $idempotency_key, $file, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -1394,13 +1418,14 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  string $version (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \SplFileObject|null $file Archivio ZIP contenente i file XML. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlBulkPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlBulkPostRequest($company_id, $version, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlBulkPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlBulkPostRequest($company_id, $version, $idempotency_key = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlBulkPost'][0])
     {
 
         // verify the required parameter 'company_id' is set
@@ -1419,6 +1444,7 @@ class FatturaElettronicaXmlApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/FatturaElettronicaXml/bulk';
         $formParams = [];
         $queryParams = [];
@@ -1427,6 +1453,10 @@ class FatturaElettronicaXmlApi
         $multipart = false;
 
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($company_id !== null) {
@@ -1532,6 +1562,7 @@ class FatturaElettronicaXmlApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaExportOptions|null $fattura_elettronica_export_options Opzioni di esportazione. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlExportPost'] to see the possible values for this operation
      *
@@ -1539,9 +1570,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\FatturaElettronicaExportResult|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlExportPost($version, $company_id, $validation_override = null, $fattura_elettronica_export_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlExportPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlExportPost($version, $company_id, $validation_override = null, $idempotency_key = null, $fattura_elettronica_export_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlExportPost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdFatturaElettronicaXmlExportPostWithHttpInfo($version, $company_id, $validation_override, $fattura_elettronica_export_options, $contentType);
+        list($response) = $this->apiVversionCompanyIdFatturaElettronicaXmlExportPostWithHttpInfo($version, $company_id, $validation_override, $idempotency_key, $fattura_elettronica_export_options, $contentType);
         return $response;
     }
 
@@ -1553,6 +1584,7 @@ class FatturaElettronicaXmlApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaExportOptions|null $fattura_elettronica_export_options Opzioni di esportazione. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlExportPost'] to see the possible values for this operation
      *
@@ -1560,9 +1592,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\FatturaElettronicaExportResult|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlExportPostWithHttpInfo($version, $company_id, $validation_override = null, $fattura_elettronica_export_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlExportPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlExportPostWithHttpInfo($version, $company_id, $validation_override = null, $idempotency_key = null, $fattura_elettronica_export_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlExportPost'][0])
     {
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlExportPostRequest($version, $company_id, $validation_override, $fattura_elettronica_export_options, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlExportPostRequest($version, $company_id, $validation_override, $idempotency_key, $fattura_elettronica_export_options, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -1751,15 +1783,16 @@ class FatturaElettronicaXmlApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaExportOptions|null $fattura_elettronica_export_options Opzioni di esportazione. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlExportPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlExportPostAsync($version, $company_id, $validation_override = null, $fattura_elettronica_export_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlExportPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlExportPostAsync($version, $company_id, $validation_override = null, $idempotency_key = null, $fattura_elettronica_export_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlExportPost'][0])
     {
-        return $this->apiVversionCompanyIdFatturaElettronicaXmlExportPostAsyncWithHttpInfo($version, $company_id, $validation_override, $fattura_elettronica_export_options, $contentType)
+        return $this->apiVversionCompanyIdFatturaElettronicaXmlExportPostAsyncWithHttpInfo($version, $company_id, $validation_override, $idempotency_key, $fattura_elettronica_export_options, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -1775,16 +1808,17 @@ class FatturaElettronicaXmlApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaExportOptions|null $fattura_elettronica_export_options Opzioni di esportazione. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlExportPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlExportPostAsyncWithHttpInfo($version, $company_id, $validation_override = null, $fattura_elettronica_export_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlExportPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlExportPostAsyncWithHttpInfo($version, $company_id, $validation_override = null, $idempotency_key = null, $fattura_elettronica_export_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlExportPost'][0])
     {
         $returnType = '\Amica\Sdk\Model\FatturaElettronicaExportResult';
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlExportPostRequest($version, $company_id, $validation_override, $fattura_elettronica_export_options, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlExportPostRequest($version, $company_id, $validation_override, $idempotency_key, $fattura_elettronica_export_options, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -1828,13 +1862,14 @@ class FatturaElettronicaXmlApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaExportOptions|null $fattura_elettronica_export_options Opzioni di esportazione. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlExportPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlExportPostRequest($version, $company_id, $validation_override = null, $fattura_elettronica_export_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlExportPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlExportPostRequest($version, $company_id, $validation_override = null, $idempotency_key = null, $fattura_elettronica_export_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlExportPost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -1850,6 +1885,7 @@ class FatturaElettronicaXmlApi
                 'Missing the required parameter $company_id when calling apiVversionCompanyIdFatturaElettronicaXmlExportPost'
             );
         }
+
 
 
 
@@ -1871,6 +1907,10 @@ class FatturaElettronicaXmlApi
             false // required
         ) ?? []);
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -3991,6 +4031,7 @@ class FatturaElettronicaXmlApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXml|null $fattura_elettronica_xml Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlIdPut'] to see the possible values for this operation
      *
@@ -3998,9 +4039,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\FatturaElettronicaXml|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlIdPut($version, $company_id, $id, $validation_override = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlIdPut'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlIdPut($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlIdPut'][0])
     {
-        list($response) = $this->apiVversionCompanyIdFatturaElettronicaXmlIdPutWithHttpInfo($version, $company_id, $id, $validation_override, $fattura_elettronica_xml, $contentType);
+        list($response) = $this->apiVversionCompanyIdFatturaElettronicaXmlIdPutWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $fattura_elettronica_xml, $contentType);
         return $response;
     }
 
@@ -4013,6 +4054,7 @@ class FatturaElettronicaXmlApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXml|null $fattura_elettronica_xml Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlIdPut'] to see the possible values for this operation
      *
@@ -4020,9 +4062,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\FatturaElettronicaXml|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlIdPutWithHttpInfo($version, $company_id, $id, $validation_override = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlIdPut'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlIdPutWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlIdPut'][0])
     {
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlIdPutRequest($version, $company_id, $id, $validation_override, $fattura_elettronica_xml, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlIdPutRequest($version, $company_id, $id, $validation_override, $idempotency_key, $fattura_elettronica_xml, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -4247,15 +4289,16 @@ class FatturaElettronicaXmlApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXml|null $fattura_elettronica_xml Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlIdPut'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlIdPutAsync($version, $company_id, $id, $validation_override = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlIdPut'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlIdPutAsync($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlIdPut'][0])
     {
-        return $this->apiVversionCompanyIdFatturaElettronicaXmlIdPutAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $fattura_elettronica_xml, $contentType)
+        return $this->apiVversionCompanyIdFatturaElettronicaXmlIdPutAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $fattura_elettronica_xml, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -4272,16 +4315,17 @@ class FatturaElettronicaXmlApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXml|null $fattura_elettronica_xml Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlIdPut'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlIdPutAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlIdPut'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlIdPutAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlIdPut'][0])
     {
         $returnType = '\Amica\Sdk\Model\FatturaElettronicaXml';
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlIdPutRequest($version, $company_id, $id, $validation_override, $fattura_elettronica_xml, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlIdPutRequest($version, $company_id, $id, $validation_override, $idempotency_key, $fattura_elettronica_xml, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -4326,13 +4370,14 @@ class FatturaElettronicaXmlApi
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXml|null $fattura_elettronica_xml Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlIdPut'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlIdPutRequest($version, $company_id, $id, $validation_override = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlIdPut'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlIdPutRequest($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlIdPut'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -4359,6 +4404,7 @@ class FatturaElettronicaXmlApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/FatturaElettronicaXml/{id}';
         $formParams = [];
         $queryParams = [];
@@ -4376,6 +4422,10 @@ class FatturaElettronicaXmlApi
             false // required
         ) ?? []);
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -4482,6 +4532,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \DateTime|null $data_consegna_sdi Data di consegna del Sistema di Interscambio (SdI). (optional)
      * @param  string|null $identificativo_sdi Identificativo assegnato dal Sistema di Interscambio (SdI). (optional)
      * @param  \SplFileObject|null $file Contenuto del file. (optional)
@@ -4491,9 +4542,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\FatturaElettronicaImportResult[]|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlImportPost($version, $company_id, $data_consegna_sdi = null, $identificativo_sdi = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlImportPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlImportPost($version, $company_id, $idempotency_key = null, $data_consegna_sdi = null, $identificativo_sdi = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlImportPost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdFatturaElettronicaXmlImportPostWithHttpInfo($version, $company_id, $data_consegna_sdi, $identificativo_sdi, $file, $contentType);
+        list($response) = $this->apiVversionCompanyIdFatturaElettronicaXmlImportPostWithHttpInfo($version, $company_id, $idempotency_key, $data_consegna_sdi, $identificativo_sdi, $file, $contentType);
         return $response;
     }
 
@@ -4504,6 +4555,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \DateTime|null $data_consegna_sdi Data di consegna del Sistema di Interscambio (SdI). (optional)
      * @param  string|null $identificativo_sdi Identificativo assegnato dal Sistema di Interscambio (SdI). (optional)
      * @param  \SplFileObject|null $file Contenuto del file. (optional)
@@ -4513,9 +4565,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\FatturaElettronicaImportResult[]|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlImportPostWithHttpInfo($version, $company_id, $data_consegna_sdi = null, $identificativo_sdi = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlImportPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlImportPostWithHttpInfo($version, $company_id, $idempotency_key = null, $data_consegna_sdi = null, $identificativo_sdi = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlImportPost'][0])
     {
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlImportPostRequest($version, $company_id, $data_consegna_sdi, $identificativo_sdi, $file, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlImportPostRequest($version, $company_id, $idempotency_key, $data_consegna_sdi, $identificativo_sdi, $file, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -4668,6 +4720,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \DateTime|null $data_consegna_sdi Data di consegna del Sistema di Interscambio (SdI). (optional)
      * @param  string|null $identificativo_sdi Identificativo assegnato dal Sistema di Interscambio (SdI). (optional)
      * @param  \SplFileObject|null $file Contenuto del file. (optional)
@@ -4676,9 +4729,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlImportPostAsync($version, $company_id, $data_consegna_sdi = null, $identificativo_sdi = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlImportPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlImportPostAsync($version, $company_id, $idempotency_key = null, $data_consegna_sdi = null, $identificativo_sdi = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlImportPost'][0])
     {
-        return $this->apiVversionCompanyIdFatturaElettronicaXmlImportPostAsyncWithHttpInfo($version, $company_id, $data_consegna_sdi, $identificativo_sdi, $file, $contentType)
+        return $this->apiVversionCompanyIdFatturaElettronicaXmlImportPostAsyncWithHttpInfo($version, $company_id, $idempotency_key, $data_consegna_sdi, $identificativo_sdi, $file, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -4693,6 +4746,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \DateTime|null $data_consegna_sdi Data di consegna del Sistema di Interscambio (SdI). (optional)
      * @param  string|null $identificativo_sdi Identificativo assegnato dal Sistema di Interscambio (SdI). (optional)
      * @param  \SplFileObject|null $file Contenuto del file. (optional)
@@ -4701,10 +4755,10 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlImportPostAsyncWithHttpInfo($version, $company_id, $data_consegna_sdi = null, $identificativo_sdi = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlImportPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlImportPostAsyncWithHttpInfo($version, $company_id, $idempotency_key = null, $data_consegna_sdi = null, $identificativo_sdi = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlImportPost'][0])
     {
         $returnType = '\Amica\Sdk\Model\FatturaElettronicaImportResult[]';
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlImportPostRequest($version, $company_id, $data_consegna_sdi, $identificativo_sdi, $file, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlImportPostRequest($version, $company_id, $idempotency_key, $data_consegna_sdi, $identificativo_sdi, $file, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -4747,6 +4801,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \DateTime|null $data_consegna_sdi Data di consegna del Sistema di Interscambio (SdI). (optional)
      * @param  string|null $identificativo_sdi Identificativo assegnato dal Sistema di Interscambio (SdI). (optional)
      * @param  \SplFileObject|null $file Contenuto del file. (optional)
@@ -4755,7 +4810,7 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlImportPostRequest($version, $company_id, $data_consegna_sdi = null, $identificativo_sdi = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlImportPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlImportPostRequest($version, $company_id, $idempotency_key = null, $data_consegna_sdi = null, $identificativo_sdi = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlImportPost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -4776,6 +4831,7 @@ class FatturaElettronicaXmlApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/FatturaElettronicaXml/import';
         $formParams = [];
         $queryParams = [];
@@ -4784,6 +4840,10 @@ class FatturaElettronicaXmlApi
         $multipart = false;
 
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -5271,6 +5331,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string|null $file_name Nome del file. (optional)
      * @param  string|null $progressivo Progressivo del Sistema di Interscambio (SdI). (optional)
      * @param  int|null $documento_id Identificativo del Amica.Documento da abbinare. (optional)
@@ -5281,9 +5342,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlPairPost($version, $company_id, $file_name = null, $progressivo = null, $documento_id = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPairPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlPairPost($version, $company_id, $idempotency_key = null, $file_name = null, $progressivo = null, $documento_id = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPairPost'][0])
     {
-        $this->apiVversionCompanyIdFatturaElettronicaXmlPairPostWithHttpInfo($version, $company_id, $file_name, $progressivo, $documento_id, $file, $contentType);
+        $this->apiVversionCompanyIdFatturaElettronicaXmlPairPostWithHttpInfo($version, $company_id, $idempotency_key, $file_name, $progressivo, $documento_id, $file, $contentType);
     }
 
     /**
@@ -5293,6 +5354,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string|null $file_name Nome del file. (optional)
      * @param  string|null $progressivo Progressivo del Sistema di Interscambio (SdI). (optional)
      * @param  int|null $documento_id Identificativo del Amica.Documento da abbinare. (optional)
@@ -5303,9 +5365,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlPairPostWithHttpInfo($version, $company_id, $file_name = null, $progressivo = null, $documento_id = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPairPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlPairPostWithHttpInfo($version, $company_id, $idempotency_key = null, $file_name = null, $progressivo = null, $documento_id = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPairPost'][0])
     {
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlPairPostRequest($version, $company_id, $file_name, $progressivo, $documento_id, $file, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlPairPostRequest($version, $company_id, $idempotency_key, $file_name, $progressivo, $documento_id, $file, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -5354,6 +5416,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string|null $file_name Nome del file. (optional)
      * @param  string|null $progressivo Progressivo del Sistema di Interscambio (SdI). (optional)
      * @param  int|null $documento_id Identificativo del Amica.Documento da abbinare. (optional)
@@ -5363,9 +5426,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlPairPostAsync($version, $company_id, $file_name = null, $progressivo = null, $documento_id = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPairPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlPairPostAsync($version, $company_id, $idempotency_key = null, $file_name = null, $progressivo = null, $documento_id = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPairPost'][0])
     {
-        return $this->apiVversionCompanyIdFatturaElettronicaXmlPairPostAsyncWithHttpInfo($version, $company_id, $file_name, $progressivo, $documento_id, $file, $contentType)
+        return $this->apiVversionCompanyIdFatturaElettronicaXmlPairPostAsyncWithHttpInfo($version, $company_id, $idempotency_key, $file_name, $progressivo, $documento_id, $file, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -5380,6 +5443,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string|null $file_name Nome del file. (optional)
      * @param  string|null $progressivo Progressivo del Sistema di Interscambio (SdI). (optional)
      * @param  int|null $documento_id Identificativo del Amica.Documento da abbinare. (optional)
@@ -5389,10 +5453,10 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlPairPostAsyncWithHttpInfo($version, $company_id, $file_name = null, $progressivo = null, $documento_id = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPairPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlPairPostAsyncWithHttpInfo($version, $company_id, $idempotency_key = null, $file_name = null, $progressivo = null, $documento_id = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPairPost'][0])
     {
         $returnType = '';
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlPairPostRequest($version, $company_id, $file_name, $progressivo, $documento_id, $file, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlPairPostRequest($version, $company_id, $idempotency_key, $file_name, $progressivo, $documento_id, $file, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -5422,6 +5486,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string|null $file_name Nome del file. (optional)
      * @param  string|null $progressivo Progressivo del Sistema di Interscambio (SdI). (optional)
      * @param  int|null $documento_id Identificativo del Amica.Documento da abbinare. (optional)
@@ -5431,7 +5496,7 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlPairPostRequest($version, $company_id, $file_name = null, $progressivo = null, $documento_id = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPairPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlPairPostRequest($version, $company_id, $idempotency_key = null, $file_name = null, $progressivo = null, $documento_id = null, $file = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPairPost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -5453,6 +5518,7 @@ class FatturaElettronicaXmlApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/FatturaElettronicaXml/pair';
         $formParams = [];
         $queryParams = [];
@@ -5461,6 +5527,10 @@ class FatturaElettronicaXmlApi
         $multipart = false;
 
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -5578,6 +5648,7 @@ class FatturaElettronicaXmlApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXml|null $fattura_elettronica_xml Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPost'] to see the possible values for this operation
      *
@@ -5585,9 +5656,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\FatturaElettronicaXml|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlPost($version, $company_id, $validation_override = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlPost($version, $company_id, $validation_override = null, $idempotency_key = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdFatturaElettronicaXmlPostWithHttpInfo($version, $company_id, $validation_override, $fattura_elettronica_xml, $contentType);
+        list($response) = $this->apiVversionCompanyIdFatturaElettronicaXmlPostWithHttpInfo($version, $company_id, $validation_override, $idempotency_key, $fattura_elettronica_xml, $contentType);
         return $response;
     }
 
@@ -5599,6 +5670,7 @@ class FatturaElettronicaXmlApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXml|null $fattura_elettronica_xml Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPost'] to see the possible values for this operation
      *
@@ -5606,9 +5678,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\FatturaElettronicaXml|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlPostWithHttpInfo($version, $company_id, $validation_override = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlPostWithHttpInfo($version, $company_id, $validation_override = null, $idempotency_key = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPost'][0])
     {
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlPostRequest($version, $company_id, $validation_override, $fattura_elettronica_xml, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlPostRequest($version, $company_id, $validation_override, $idempotency_key, $fattura_elettronica_xml, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -5797,15 +5869,16 @@ class FatturaElettronicaXmlApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXml|null $fattura_elettronica_xml Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlPostAsync($version, $company_id, $validation_override = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlPostAsync($version, $company_id, $validation_override = null, $idempotency_key = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPost'][0])
     {
-        return $this->apiVversionCompanyIdFatturaElettronicaXmlPostAsyncWithHttpInfo($version, $company_id, $validation_override, $fattura_elettronica_xml, $contentType)
+        return $this->apiVversionCompanyIdFatturaElettronicaXmlPostAsyncWithHttpInfo($version, $company_id, $validation_override, $idempotency_key, $fattura_elettronica_xml, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -5821,16 +5894,17 @@ class FatturaElettronicaXmlApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXml|null $fattura_elettronica_xml Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlPostAsyncWithHttpInfo($version, $company_id, $validation_override = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlPostAsyncWithHttpInfo($version, $company_id, $validation_override = null, $idempotency_key = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPost'][0])
     {
         $returnType = '\Amica\Sdk\Model\FatturaElettronicaXml';
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlPostRequest($version, $company_id, $validation_override, $fattura_elettronica_xml, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlPostRequest($version, $company_id, $validation_override, $idempotency_key, $fattura_elettronica_xml, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -5874,13 +5948,14 @@ class FatturaElettronicaXmlApi
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXml|null $fattura_elettronica_xml Istanza dell&#39;elemento da salvare. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlPostRequest($version, $company_id, $validation_override = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlPostRequest($version, $company_id, $validation_override = null, $idempotency_key = null, $fattura_elettronica_xml = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlPost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -5896,6 +5971,7 @@ class FatturaElettronicaXmlApi
                 'Missing the required parameter $company_id when calling apiVversionCompanyIdFatturaElettronicaXmlPost'
             );
         }
+
 
 
 
@@ -5917,6 +5993,10 @@ class FatturaElettronicaXmlApi
             false // required
         ) ?? []);
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -6015,15 +6095,16 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\FatturaElettronicaImportResult[]|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost($version, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost($version, $company_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostWithHttpInfo($version, $company_id, $contentType);
+        list($response) = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostWithHttpInfo($version, $company_id, $idempotency_key, $contentType);
         return $response;
     }
 
@@ -6034,15 +6115,16 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\FatturaElettronicaImportResult[]|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostWithHttpInfo($version, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostWithHttpInfo($version, $company_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost'][0])
     {
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostRequest($version, $company_id, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostRequest($version, $company_id, $idempotency_key, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -6195,14 +6277,15 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostAsync($version, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostAsync($version, $company_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost'][0])
     {
-        return $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostAsyncWithHttpInfo($version, $company_id, $contentType)
+        return $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostAsyncWithHttpInfo($version, $company_id, $idempotency_key, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -6217,15 +6300,16 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostAsyncWithHttpInfo($version, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostAsyncWithHttpInfo($version, $company_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost'][0])
     {
         $returnType = '\Amica\Sdk\Model\FatturaElettronicaImportResult[]';
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostRequest($version, $company_id, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostRequest($version, $company_id, $idempotency_key, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -6268,12 +6352,13 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostRequest($version, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPostRequest($version, $company_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -6291,6 +6376,7 @@ class FatturaElettronicaXmlApi
         }
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/FatturaElettronicaXml/sdi/download/esiti';
         $formParams = [];
         $queryParams = [];
@@ -6299,6 +6385,10 @@ class FatturaElettronicaXmlApi
         $multipart = false;
 
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -6390,15 +6480,16 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\FatturaElettronicaImportResult[]|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost($version, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost($version, $company_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostWithHttpInfo($version, $company_id, $contentType);
+        list($response) = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostWithHttpInfo($version, $company_id, $idempotency_key, $contentType);
         return $response;
     }
 
@@ -6409,15 +6500,16 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\FatturaElettronicaImportResult[]|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostWithHttpInfo($version, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostWithHttpInfo($version, $company_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost'][0])
     {
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostRequest($version, $company_id, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostRequest($version, $company_id, $idempotency_key, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -6570,14 +6662,15 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostAsync($version, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostAsync($version, $company_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost'][0])
     {
-        return $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostAsyncWithHttpInfo($version, $company_id, $contentType)
+        return $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostAsyncWithHttpInfo($version, $company_id, $idempotency_key, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -6592,15 +6685,16 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostAsyncWithHttpInfo($version, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostAsyncWithHttpInfo($version, $company_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost'][0])
     {
         $returnType = '\Amica\Sdk\Model\FatturaElettronicaImportResult[]';
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostRequest($version, $company_id, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostRequest($version, $company_id, $idempotency_key, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -6643,12 +6737,13 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostRequest($version, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePostRequest($version, $company_id, $idempotency_key = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -6666,6 +6761,7 @@ class FatturaElettronicaXmlApi
         }
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/FatturaElettronicaXml/sdi/download/fatture';
         $formParams = [];
         $queryParams = [];
@@ -6674,6 +6770,10 @@ class FatturaElettronicaXmlApi
         $multipart = false;
 
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -6765,6 +6865,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaUploadOptions|null $fattura_elettronica_upload_options Opzioni di invio. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost'] to see the possible values for this operation
      *
@@ -6772,9 +6873,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\FatturaElettronicaUploadResult|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost($version, $company_id, $fattura_elettronica_upload_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost($version, $company_id, $idempotency_key = null, $fattura_elettronica_upload_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostWithHttpInfo($version, $company_id, $fattura_elettronica_upload_options, $contentType);
+        list($response) = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostWithHttpInfo($version, $company_id, $idempotency_key, $fattura_elettronica_upload_options, $contentType);
         return $response;
     }
 
@@ -6785,6 +6886,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaUploadOptions|null $fattura_elettronica_upload_options Opzioni di invio. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost'] to see the possible values for this operation
      *
@@ -6792,9 +6894,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\FatturaElettronicaUploadResult|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostWithHttpInfo($version, $company_id, $fattura_elettronica_upload_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostWithHttpInfo($version, $company_id, $idempotency_key = null, $fattura_elettronica_upload_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost'][0])
     {
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostRequest($version, $company_id, $fattura_elettronica_upload_options, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostRequest($version, $company_id, $idempotency_key, $fattura_elettronica_upload_options, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -6982,15 +7084,16 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaUploadOptions|null $fattura_elettronica_upload_options Opzioni di invio. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostAsync($version, $company_id, $fattura_elettronica_upload_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostAsync($version, $company_id, $idempotency_key = null, $fattura_elettronica_upload_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost'][0])
     {
-        return $this->apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostAsyncWithHttpInfo($version, $company_id, $fattura_elettronica_upload_options, $contentType)
+        return $this->apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostAsyncWithHttpInfo($version, $company_id, $idempotency_key, $fattura_elettronica_upload_options, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -7005,16 +7108,17 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaUploadOptions|null $fattura_elettronica_upload_options Opzioni di invio. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostAsyncWithHttpInfo($version, $company_id, $fattura_elettronica_upload_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostAsyncWithHttpInfo($version, $company_id, $idempotency_key = null, $fattura_elettronica_upload_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost'][0])
     {
         $returnType = '\Amica\Sdk\Model\FatturaElettronicaUploadResult';
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostRequest($version, $company_id, $fattura_elettronica_upload_options, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostRequest($version, $company_id, $idempotency_key, $fattura_elettronica_upload_options, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -7057,13 +7161,14 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaUploadOptions|null $fattura_elettronica_upload_options Opzioni di invio. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostRequest($version, $company_id, $fattura_elettronica_upload_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPostRequest($version, $company_id, $idempotency_key = null, $fattura_elettronica_upload_options = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -7082,6 +7187,7 @@ class FatturaElettronicaXmlApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/FatturaElettronicaXml/sdi/upload';
         $formParams = [];
         $queryParams = [];
@@ -7090,6 +7196,10 @@ class FatturaElettronicaXmlApi
         $multipart = false;
 
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
@@ -7188,6 +7298,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXmlStyleSheetData|null $fattura_elettronica_xml_style_sheet_data Opzioni di corrispondenza e stile. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost'] to see the possible values for this operation
      *
@@ -7195,9 +7306,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost($version, $company_id, $fattura_elettronica_xml_style_sheet_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost($version, $company_id, $idempotency_key = null, $fattura_elettronica_xml_style_sheet_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost'][0])
     {
-        $this->apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostWithHttpInfo($version, $company_id, $fattura_elettronica_xml_style_sheet_data, $contentType);
+        $this->apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostWithHttpInfo($version, $company_id, $idempotency_key, $fattura_elettronica_xml_style_sheet_data, $contentType);
     }
 
     /**
@@ -7207,6 +7318,7 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXmlStyleSheetData|null $fattura_elettronica_xml_style_sheet_data Opzioni di corrispondenza e stile. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost'] to see the possible values for this operation
      *
@@ -7214,9 +7326,9 @@ class FatturaElettronicaXmlApi
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostWithHttpInfo($version, $company_id, $fattura_elettronica_xml_style_sheet_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostWithHttpInfo($version, $company_id, $idempotency_key = null, $fattura_elettronica_xml_style_sheet_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost'][0])
     {
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostRequest($version, $company_id, $fattura_elettronica_xml_style_sheet_data, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostRequest($version, $company_id, $idempotency_key, $fattura_elettronica_xml_style_sheet_data, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -7273,15 +7385,16 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXmlStyleSheetData|null $fattura_elettronica_xml_style_sheet_data Opzioni di corrispondenza e stile. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostAsync($version, $company_id, $fattura_elettronica_xml_style_sheet_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostAsync($version, $company_id, $idempotency_key = null, $fattura_elettronica_xml_style_sheet_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost'][0])
     {
-        return $this->apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostAsyncWithHttpInfo($version, $company_id, $fattura_elettronica_xml_style_sheet_data, $contentType)
+        return $this->apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostAsyncWithHttpInfo($version, $company_id, $idempotency_key, $fattura_elettronica_xml_style_sheet_data, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -7296,16 +7409,17 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXmlStyleSheetData|null $fattura_elettronica_xml_style_sheet_data Opzioni di corrispondenza e stile. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostAsyncWithHttpInfo($version, $company_id, $fattura_elettronica_xml_style_sheet_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostAsyncWithHttpInfo($version, $company_id, $idempotency_key = null, $fattura_elettronica_xml_style_sheet_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost'][0])
     {
         $returnType = '';
-        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostRequest($version, $company_id, $fattura_elettronica_xml_style_sheet_data, $contentType);
+        $request = $this->apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostRequest($version, $company_id, $idempotency_key, $fattura_elettronica_xml_style_sheet_data, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -7335,13 +7449,14 @@ class FatturaElettronicaXmlApi
      *
      * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
      * @param  \Amica\Sdk\Model\FatturaElettronicaXmlStyleSheetData|null $fattura_elettronica_xml_style_sheet_data Opzioni di corrispondenza e stile. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostRequest($version, $company_id, $fattura_elettronica_xml_style_sheet_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost'][0])
+    public function apiVversionCompanyIdFatturaElettronicaXmlStylesheetPostRequest($version, $company_id, $idempotency_key = null, $fattura_elettronica_xml_style_sheet_data = null, string $contentType = self::contentTypes['apiVversionCompanyIdFatturaElettronicaXmlStylesheetPost'][0])
     {
 
         // verify the required parameter 'version' is set
@@ -7360,6 +7475,7 @@ class FatturaElettronicaXmlApi
 
 
 
+
         $resourcePath = '/api/v{version}/{companyId}/FatturaElettronicaXml/stylesheet';
         $formParams = [];
         $queryParams = [];
@@ -7368,6 +7484,10 @@ class FatturaElettronicaXmlApi
         $multipart = false;
 
 
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
 
         // path params
         if ($version !== null) {
