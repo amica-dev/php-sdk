@@ -59,7 +59,7 @@ class DistinctPropertyGroup implements ModelInterface, ArrayAccess, \JsonSeriali
       * @var string[]
       */
     protected static $openAPITypes = [
-        'key' => 'mixed',
+        'key' => 'string',
         'items' => '\Amica\Sdk\Model\DistinctPropertyGroup[]'
     ];
 
@@ -238,6 +238,18 @@ class DistinctPropertyGroup implements ModelInterface, ArrayAccess, \JsonSeriali
 
 
     /**
+     * Gets allowable values of the enum
+     *
+     * @return string[]
+     */
+    public function getKeyAllowableValues()
+    {
+        return [
+            
+        ];
+    }
+
+    /**
      * Associative array for storing property values
      *
      * @var mixed[]
@@ -283,6 +295,15 @@ class DistinctPropertyGroup implements ModelInterface, ArrayAccess, \JsonSeriali
     {
         $invalidProperties = [];
 
+        $allowedValues = $this->getKeyAllowableValues();
+        if (!is_null($this->container['key']) && !in_array($this->container['key'], $allowedValues, true)) {
+            $invalidProperties[] = sprintf(
+                "invalid value '%s' for 'key', must be one of '%s'",
+                $this->container['key'],
+                implode("', '", $allowedValues)
+            );
+        }
+
         return $invalidProperties;
     }
 
@@ -301,7 +322,7 @@ class DistinctPropertyGroup implements ModelInterface, ArrayAccess, \JsonSeriali
     /**
      * Gets key
      *
-     * @return mixed|null
+     * @return string|null
      */
     public function getKey()
     {
@@ -311,7 +332,7 @@ class DistinctPropertyGroup implements ModelInterface, ArrayAccess, \JsonSeriali
     /**
      * Sets key
      *
-     * @param mixed|null $key Chiave di distinzione (es.: \"RagioneSociale1\").
+     * @param string|null $key Chiave di distinzione (es.: \"RagioneSociale1\").
      *
      * @return self
      */
@@ -326,6 +347,16 @@ class DistinctPropertyGroup implements ModelInterface, ArrayAccess, \JsonSeriali
                 unset($nullablesSetToNull[$index]);
                 $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
             }
+        }
+        $allowedValues = $this->getKeyAllowableValues();
+        if (!is_null($key) && !in_array($key, $allowedValues, true)) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    "Invalid value '%s' for 'key', must be one of '%s'",
+                    $key,
+                    implode("', '", $allowedValues)
+                )
+            );
         }
         $this->container['key'] = $key;
 
