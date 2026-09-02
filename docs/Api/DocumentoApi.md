@@ -173,7 +173,7 @@ apiVversionCompanyIdDocumentoDocumentoIdEmitPost($version, $company_id, $documen
 
 Emette un documento.
 
-A seconda del tipo di documento, l'emissione comporta una serie di operazioni amministrative e contabili:               1) Aggiornamento dell'Amica.Anagrafica coinvolta (fatturato, numero fatture, ecc.);              2) Creazione della registrazione contabile di emissione;              3) Creazione delle scadenze attive o passive, in base al tipo di pagamento;              4) Eventuale autoproduzione dei beni fatturati tramite distinta base, se l'opzione è attiva;              5) Creazione del movimento di magazzino;              6) Aggiornamento delle giacenze dei beni coinvolti, nei rispettivi magazzini;              7) Aggiornamento di eventuali ordini collegati.               Un documento già emesso non può essere riemesso. Alcuni tipi di documento non supportano l'emissione (ordini e preventivi, ad esempio).
+A seconda del tipo di documento, l'emissione comporta una serie di operazioni amministrative e contabili:               1) Aggiornamento dell'`Anagrafica` coinvolta (fatturato, numero fatture, ecc.);              2) Creazione della registrazione contabile di emissione;              3) Creazione delle scadenze attive o passive, in base al tipo di pagamento;              4) Eventuale autoproduzione dei beni fatturati tramite distinta base, se l'opzione è attiva;              5) Creazione del movimento di magazzino;              6) Aggiornamento delle giacenze dei beni coinvolti, nei rispettivi magazzini;              7) Aggiornamento di eventuali ordini collegati.               Un documento già emesso non può essere riemesso. Alcuni tipi di documento non supportano l'emissione (ordini e preventivi, ad esempio).
 
 ### Example
 

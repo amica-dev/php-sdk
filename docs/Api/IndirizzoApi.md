@@ -8,7 +8,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 | [**apiVversionCompanyIdIndirizzoIdDelete()**](IndirizzoApi.md#apiVversionCompanyIdIndirizzoIdDelete) | **DELETE** /api/v{version}/{companyId}/Indirizzo/{id} | Elimina un elemento. |
 | [**apiVversionCompanyIdIndirizzoIdGet()**](IndirizzoApi.md#apiVversionCompanyIdIndirizzoIdGet) | **GET** /api/v{version}/{companyId}/Indirizzo/{id} | Restituisce un elemento. |
 | [**apiVversionCompanyIdIndirizzoIdPut()**](IndirizzoApi.md#apiVversionCompanyIdIndirizzoIdPut) | **PUT** /api/v{version}/{companyId}/Indirizzo/{id} | Aggiorna un elemento esistente. |
-| [**apiVversionCompanyIdIndirizzoNewGet()**](IndirizzoApi.md#apiVversionCompanyIdIndirizzoNewGet) | **GET** /api/v{version}/{companyId}/Indirizzo/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile). |
+| [**apiVversionCompanyIdIndirizzoNewGet()**](IndirizzoApi.md#apiVversionCompanyIdIndirizzoNewGet) | **GET** /api/v{version}/{companyId}/Indirizzo/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di &#x60;Documento&#x60; avrà il &#x60;Numero&#x60; appropriato, basato sui documenti preesistenti di tipo compatibile). |
 | [**apiVversionCompanyIdIndirizzoPost()**](IndirizzoApi.md#apiVversionCompanyIdIndirizzoPost) | **POST** /api/v{version}/{companyId}/Indirizzo | Salva un nuovo elemento. |
 
 
@@ -310,7 +310,7 @@ try {
 apiVversionCompanyIdIndirizzoNewGet($version, $company_id): \Amica\Sdk\Model\Indirizzo
 ```
 
-Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile).
+Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di `Documento` avrà il `Numero` appropriato, basato sui documenti preesistenti di tipo compatibile).
 
 ### Example
 

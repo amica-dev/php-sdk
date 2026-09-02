@@ -5,7 +5,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 | Method | HTTP request | Description |
 | ------------- | ------------- | ------------- |
 | [**apiVversionCompanyIdBeneServizioCollegadocumentoPost()**](BeneServizioApi.md#apiVversionCompanyIdBeneServizioCollegadocumentoPost) | **POST** /api/v{version}/{companyId}/BeneServizio/collegadocumento | Collega un bene/servizio a un documento. |
-| [**apiVversionCompanyIdBeneServizioComputePost()**](BeneServizioApi.md#apiVversionCompanyIdBeneServizioComputePost) | **POST** /api/v{version}/{companyId}/BeneServizio/compute | Calcola gli importi di un Amica.BeneServizio (vedi Amica.BeneServizioComputeResult), considerando parametri come quantità movimentata, IVA applicata, eventuali sconti. |
+| [**apiVversionCompanyIdBeneServizioComputePost()**](BeneServizioApi.md#apiVversionCompanyIdBeneServizioComputePost) | **POST** /api/v{version}/{companyId}/BeneServizio/compute | Calcola gli importi di un &#x60;BeneServizio&#x60; (vedi &#x60;BeneServizioComputeResult&#x60;), considerando parametri come quantità movimentata, IVA applicata, eventuali sconti. |
 | [**apiVversionCompanyIdBeneServizioGet()**](BeneServizioApi.md#apiVversionCompanyIdBeneServizioGet) | **GET** /api/v{version}/{companyId}/BeneServizio | Restituisce una lista di elementi. |
 | [**apiVversionCompanyIdBeneServizioIdDelete()**](BeneServizioApi.md#apiVversionCompanyIdBeneServizioIdDelete) | **DELETE** /api/v{version}/{companyId}/BeneServizio/{id} | Elimina un elemento. |
 | [**apiVversionCompanyIdBeneServizioIdGet()**](BeneServizioApi.md#apiVversionCompanyIdBeneServizioIdGet) | **GET** /api/v{version}/{companyId}/BeneServizio/{id} | Restituisce un elemento. |
@@ -90,7 +90,7 @@ try {
 apiVversionCompanyIdBeneServizioComputePost($company_id, $version, $idempotency_key, $bene_servizio_compute_data): \Amica\Sdk\Model\BeneServizioComputeResult
 ```
 
-Calcola gli importi di un Amica.BeneServizio (vedi Amica.BeneServizioComputeResult), considerando parametri come quantità movimentata, IVA applicata, eventuali sconti.
+Calcola gli importi di un `BeneServizio` (vedi `BeneServizioComputeResult`), considerando parametri come quantità movimentata, IVA applicata, eventuali sconti.
 
 ### Example
 

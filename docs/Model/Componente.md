@@ -6,7 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **id** | **int** | Identificativo univoco. | [optional]
 **concurrency_token** | **int** | Il token di concorrenza implementa il controllo di concorrenza ottimistica: a ogni operazione di aggiornamento o cancellazione il valore del token sul database viene confrontato con quello sull&#39;entità. Se i valori coincidono, l&#39;operazione viene eseguita; se differiscono, si assume che un altro utente abbia effettuato una scrittura nel frattempo e l&#39;aggiornamento viene rifiutato. | [optional]
-**articolo_id** | **int** | Identificativo univoco dell&#39;Amica.Componente.Articolo da comporre. | [optional]
+**articolo_id** | **int** | Identificativo univoco dell&#39;&#x60;Articolo&#x60; da comporre. | [optional]
 **articolo** | [**\Amica\Sdk\Model\Articolo**](Articolo.md) |  | [optional]
 **articolo_componente_id** | **int** | Identificativo univoco del componente (distinta base). | [optional]
 **articolo_componente** | [**\Amica\Sdk\Model\Articolo**](Articolo.md) |  | [optional]

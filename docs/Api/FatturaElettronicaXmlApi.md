@@ -17,7 +17,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 | [**apiVversionCompanyIdFatturaElettronicaXmlIdGet()**](FatturaElettronicaXmlApi.md#apiVversionCompanyIdFatturaElettronicaXmlIdGet) | **GET** /api/v{version}/{companyId}/FatturaElettronicaXml/{id} | Restituisce un elemento. |
 | [**apiVversionCompanyIdFatturaElettronicaXmlIdPut()**](FatturaElettronicaXmlApi.md#apiVversionCompanyIdFatturaElettronicaXmlIdPut) | **PUT** /api/v{version}/{companyId}/FatturaElettronicaXml/{id} | Aggiorna un elemento esistente. |
 | [**apiVversionCompanyIdFatturaElettronicaXmlImportPost()**](FatturaElettronicaXmlApi.md#apiVversionCompanyIdFatturaElettronicaXmlImportPost) | **POST** /api/v{version}/{companyId}/FatturaElettronicaXml/import | Importa una fattura XML. |
-| [**apiVversionCompanyIdFatturaElettronicaXmlNewGet()**](FatturaElettronicaXmlApi.md#apiVversionCompanyIdFatturaElettronicaXmlNewGet) | **GET** /api/v{version}/{companyId}/FatturaElettronicaXml/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile). |
+| [**apiVversionCompanyIdFatturaElettronicaXmlNewGet()**](FatturaElettronicaXmlApi.md#apiVversionCompanyIdFatturaElettronicaXmlNewGet) | **GET** /api/v{version}/{companyId}/FatturaElettronicaXml/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di &#x60;Documento&#x60; avrà il &#x60;Numero&#x60; appropriato, basato sui documenti preesistenti di tipo compatibile). |
 | [**apiVversionCompanyIdFatturaElettronicaXmlPairPost()**](FatturaElettronicaXmlApi.md#apiVversionCompanyIdFatturaElettronicaXmlPairPost) | **POST** /api/v{version}/{companyId}/FatturaElettronicaXml/pair | Associa una fattura XML a un documento esistente. |
 | [**apiVversionCompanyIdFatturaElettronicaXmlPost()**](FatturaElettronicaXmlApi.md#apiVversionCompanyIdFatturaElettronicaXmlPost) | **POST** /api/v{version}/{companyId}/FatturaElettronicaXml | Salva un nuovo elemento. |
 | [**apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost()**](FatturaElettronicaXmlApi.md#apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadEsitiPost) | **POST** /api/v{version}/{companyId}/FatturaElettronicaXml/sdi/download/esiti | Interroga il Sistema di Interscambio (SDI) e scarica gli esiti di invio delle fatture precedentemente caricate. |
@@ -950,7 +950,7 @@ try {
 apiVversionCompanyIdFatturaElettronicaXmlNewGet($version, $company_id): \Amica\Sdk\Model\FatturaElettronicaXml
 ```
 
-Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile).
+Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di `Documento` avrà il `Numero` appropriato, basato sui documenti preesistenti di tipo compatibile).
 
 ### Example
 
@@ -1046,7 +1046,7 @@ $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
 $idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
 $file_name = 'file_name_example'; // string | Nome del file.
 $progressivo = 'progressivo_example'; // string | Progressivo del Sistema di Interscambio (SdI).
-$documento_id = 56; // int | Identificativo del Amica.Documento da abbinare.
+$documento_id = 56; // int | Identificativo del `Documento` da abbinare.
 $file = '/path/to/file.txt'; // \SplFileObject | Contenuto del file.
 
 try {
@@ -1065,7 +1065,7 @@ try {
 | **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
 | **file_name** | **string**| Nome del file. | [optional] |
 | **progressivo** | **string**| Progressivo del Sistema di Interscambio (SdI). | [optional] |
-| **documento_id** | **int**| Identificativo del Amica.Documento da abbinare. | [optional] |
+| **documento_id** | **int**| Identificativo del &#x60;Documento&#x60; da abbinare. | [optional] |
 | **file** | **\SplFileObject****\SplFileObject**| Contenuto del file. | [optional] |
 
 ### Return type
@@ -1233,7 +1233,7 @@ apiVversionCompanyIdFatturaElettronicaXmlSdiDownloadFatturePost($version, $compa
 
 Scarica le nuove fatture dal Sistema di Interscambio (SDI).
 
-Il <a href=\"https://gestionaleamica.com/Software/ServizioInterscambioFatture\">Servizio di Interscambio Documenti</a> deve essere attivo per l'azienda e la relativa chiave di attivazione deve essere presente in !:ImpostazioniSdi.SdiApiKey.
+Il <a href=\"https://gestionaleamica.com/Software/ServizioInterscambioFatture\">Servizio di Interscambio Documenti</a> deve essere attivo per l'azienda e la relativa chiave di attivazione deve essere presente in `SdiApiKey`.
 
 ### Example
 
@@ -1303,7 +1303,7 @@ apiVversionCompanyIdFatturaElettronicaXmlSdiUploadPost($version, $company_id, $i
 
 Invia una o più fatture al Sistema di Interscambio (SDI).
 
-Il <a href=\"https://gestionaleamica.com/Software/ServizioInterscambioFatture\">Servizio di Interscambio Documenti</a> deve essere attivo per l'azienda e la relativa chiave di attivazione deve essere presente in !:ImpostazioniSdi.SdiApiKey.
+Il <a href=\"https://gestionaleamica.com/Software/ServizioInterscambioFatture\">Servizio di Interscambio Documenti</a> deve essere attivo per l'azienda e la relativa chiave di attivazione deve essere presente in `SdiApiKey`.
 
 ### Example
 

@@ -8,7 +8,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 | [**apiVversionCompanyIdRisorsaFinanziariaIdDelete()**](RisorsaFinanziariaApi.md#apiVversionCompanyIdRisorsaFinanziariaIdDelete) | **DELETE** /api/v{version}/{companyId}/RisorsaFinanziaria/{id} | Elimina un elemento. |
 | [**apiVversionCompanyIdRisorsaFinanziariaIdGet()**](RisorsaFinanziariaApi.md#apiVversionCompanyIdRisorsaFinanziariaIdGet) | **GET** /api/v{version}/{companyId}/RisorsaFinanziaria/{id} | Restituisce un elemento. |
 | [**apiVversionCompanyIdRisorsaFinanziariaIdPut()**](RisorsaFinanziariaApi.md#apiVversionCompanyIdRisorsaFinanziariaIdPut) | **PUT** /api/v{version}/{companyId}/RisorsaFinanziaria/{id} | Aggiorna un elemento esistente. |
-| [**apiVversionCompanyIdRisorsaFinanziariaNewGet()**](RisorsaFinanziariaApi.md#apiVversionCompanyIdRisorsaFinanziariaNewGet) | **GET** /api/v{version}/{companyId}/RisorsaFinanziaria/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile). |
+| [**apiVversionCompanyIdRisorsaFinanziariaNewGet()**](RisorsaFinanziariaApi.md#apiVversionCompanyIdRisorsaFinanziariaNewGet) | **GET** /api/v{version}/{companyId}/RisorsaFinanziaria/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di &#x60;Documento&#x60; avrà il &#x60;Numero&#x60; appropriato, basato sui documenti preesistenti di tipo compatibile). |
 | [**apiVversionCompanyIdRisorsaFinanziariaPost()**](RisorsaFinanziariaApi.md#apiVversionCompanyIdRisorsaFinanziariaPost) | **POST** /api/v{version}/{companyId}/RisorsaFinanziaria | Salva un nuovo elemento. |
 
 
@@ -310,7 +310,7 @@ try {
 apiVversionCompanyIdRisorsaFinanziariaNewGet($version, $company_id): \Amica\Sdk\Model\RisorsaFinanziaria
 ```
 
-Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile).
+Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di `Documento` avrà il `Numero` appropriato, basato sui documenti preesistenti di tipo compatibile).
 
 ### Example
 

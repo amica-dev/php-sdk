@@ -10,7 +10,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 | [**apiVversionCompanyIdDocumentoMediaFileIdDelete()**](DocumentoMediaFileApi.md#apiVversionCompanyIdDocumentoMediaFileIdDelete) | **DELETE** /api/v{version}/{companyId}/DocumentoMediaFile/{id} | Elimina un elemento. |
 | [**apiVversionCompanyIdDocumentoMediaFileIdGet()**](DocumentoMediaFileApi.md#apiVversionCompanyIdDocumentoMediaFileIdGet) | **GET** /api/v{version}/{companyId}/DocumentoMediaFile/{id} | Restituisce un elemento. |
 | [**apiVversionCompanyIdDocumentoMediaFileIdPut()**](DocumentoMediaFileApi.md#apiVversionCompanyIdDocumentoMediaFileIdPut) | **PUT** /api/v{version}/{companyId}/DocumentoMediaFile/{id} | Aggiorna un elemento esistente. |
-| [**apiVversionCompanyIdDocumentoMediaFileNewGet()**](DocumentoMediaFileApi.md#apiVversionCompanyIdDocumentoMediaFileNewGet) | **GET** /api/v{version}/{companyId}/DocumentoMediaFile/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile). |
+| [**apiVversionCompanyIdDocumentoMediaFileNewGet()**](DocumentoMediaFileApi.md#apiVversionCompanyIdDocumentoMediaFileNewGet) | **GET** /api/v{version}/{companyId}/DocumentoMediaFile/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di &#x60;Documento&#x60; avrà il &#x60;Numero&#x60; appropriato, basato sui documenti preesistenti di tipo compatibile). |
 | [**apiVversionCompanyIdDocumentoMediaFilePost()**](DocumentoMediaFileApi.md#apiVversionCompanyIdDocumentoMediaFilePost) | **POST** /api/v{version}/{companyId}/DocumentoMediaFile | Salva un nuovo elemento. |
 
 
@@ -442,7 +442,7 @@ try {
 apiVversionCompanyIdDocumentoMediaFileNewGet($version, $company_id): \Amica\Sdk\Model\DocumentoMediaFile
 ```
 
-Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile).
+Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di `Documento` avrà il `Numero` appropriato, basato sui documenti preesistenti di tipo compatibile).
 
 ### Example
 

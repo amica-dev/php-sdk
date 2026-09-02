@@ -9,7 +9,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 | [**apiVversionCompanyIdCategoriaAnagraficaIdDelete()**](CategoriaAnagraficaApi.md#apiVversionCompanyIdCategoriaAnagraficaIdDelete) | **DELETE** /api/v{version}/{companyId}/CategoriaAnagrafica/{id} | Elimina un elemento. |
 | [**apiVversionCompanyIdCategoriaAnagraficaIdGet()**](CategoriaAnagraficaApi.md#apiVversionCompanyIdCategoriaAnagraficaIdGet) | **GET** /api/v{version}/{companyId}/CategoriaAnagrafica/{id} | Restituisce un elemento. |
 | [**apiVversionCompanyIdCategoriaAnagraficaIdPut()**](CategoriaAnagraficaApi.md#apiVversionCompanyIdCategoriaAnagraficaIdPut) | **PUT** /api/v{version}/{companyId}/CategoriaAnagrafica/{id} | Aggiorna un elemento esistente. |
-| [**apiVversionCompanyIdCategoriaAnagraficaNewGet()**](CategoriaAnagraficaApi.md#apiVversionCompanyIdCategoriaAnagraficaNewGet) | **GET** /api/v{version}/{companyId}/CategoriaAnagrafica/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile). |
+| [**apiVversionCompanyIdCategoriaAnagraficaNewGet()**](CategoriaAnagraficaApi.md#apiVversionCompanyIdCategoriaAnagraficaNewGet) | **GET** /api/v{version}/{companyId}/CategoriaAnagrafica/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di &#x60;Documento&#x60; avrà il &#x60;Numero&#x60; appropriato, basato sui documenti preesistenti di tipo compatibile). |
 | [**apiVversionCompanyIdCategoriaAnagraficaPost()**](CategoriaAnagraficaApi.md#apiVversionCompanyIdCategoriaAnagraficaPost) | **POST** /api/v{version}/{companyId}/CategoriaAnagrafica | Salva un nuovo elemento. |
 
 
@@ -383,7 +383,7 @@ try {
 apiVversionCompanyIdCategoriaAnagraficaNewGet($version, $company_id): \Amica\Sdk\Model\CategoriaAnagrafica
 ```
 
-Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile).
+Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di `Documento` avrà il `Numero` appropriato, basato sui documenti preesistenti di tipo compatibile).
 
 ### Example
 

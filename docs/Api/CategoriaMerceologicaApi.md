@@ -8,7 +8,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 | [**apiVversionCompanyIdCategoriaMerceologicaIdDelete()**](CategoriaMerceologicaApi.md#apiVversionCompanyIdCategoriaMerceologicaIdDelete) | **DELETE** /api/v{version}/{companyId}/CategoriaMerceologica/{id} | Elimina un elemento. |
 | [**apiVversionCompanyIdCategoriaMerceologicaIdGet()**](CategoriaMerceologicaApi.md#apiVversionCompanyIdCategoriaMerceologicaIdGet) | **GET** /api/v{version}/{companyId}/CategoriaMerceologica/{id} | Restituisce un elemento. |
 | [**apiVversionCompanyIdCategoriaMerceologicaIdPut()**](CategoriaMerceologicaApi.md#apiVversionCompanyIdCategoriaMerceologicaIdPut) | **PUT** /api/v{version}/{companyId}/CategoriaMerceologica/{id} | Aggiorna un elemento esistente. |
-| [**apiVversionCompanyIdCategoriaMerceologicaNewGet()**](CategoriaMerceologicaApi.md#apiVversionCompanyIdCategoriaMerceologicaNewGet) | **GET** /api/v{version}/{companyId}/CategoriaMerceologica/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile). |
+| [**apiVversionCompanyIdCategoriaMerceologicaNewGet()**](CategoriaMerceologicaApi.md#apiVversionCompanyIdCategoriaMerceologicaNewGet) | **GET** /api/v{version}/{companyId}/CategoriaMerceologica/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di &#x60;Documento&#x60; avrà il &#x60;Numero&#x60; appropriato, basato sui documenti preesistenti di tipo compatibile). |
 | [**apiVversionCompanyIdCategoriaMerceologicaPost()**](CategoriaMerceologicaApi.md#apiVversionCompanyIdCategoriaMerceologicaPost) | **POST** /api/v{version}/{companyId}/CategoriaMerceologica | Salva un nuovo elemento. |
 
 
@@ -310,7 +310,7 @@ try {
 apiVversionCompanyIdCategoriaMerceologicaNewGet($version, $company_id): \Amica\Sdk\Model\CategoriaMerceologica
 ```
 
-Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile).
+Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di `Documento` avrà il `Numero` appropriato, basato sui documenti preesistenti di tipo compatibile).
 
 ### Example
 

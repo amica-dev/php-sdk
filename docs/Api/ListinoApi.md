@@ -8,7 +8,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 | [**apiVversionCompanyIdListinoIdDelete()**](ListinoApi.md#apiVversionCompanyIdListinoIdDelete) | **DELETE** /api/v{version}/{companyId}/Listino/{id} | Elimina un elemento. |
 | [**apiVversionCompanyIdListinoIdGet()**](ListinoApi.md#apiVversionCompanyIdListinoIdGet) | **GET** /api/v{version}/{companyId}/Listino/{id} | Restituisce un elemento. |
 | [**apiVversionCompanyIdListinoIdPut()**](ListinoApi.md#apiVversionCompanyIdListinoIdPut) | **PUT** /api/v{version}/{companyId}/Listino/{id} | Aggiorna un elemento esistente. |
-| [**apiVversionCompanyIdListinoNewGet()**](ListinoApi.md#apiVversionCompanyIdListinoNewGet) | **GET** /api/v{version}/{companyId}/Listino/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile). |
+| [**apiVversionCompanyIdListinoNewGet()**](ListinoApi.md#apiVversionCompanyIdListinoNewGet) | **GET** /api/v{version}/{companyId}/Listino/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di &#x60;Documento&#x60; avrà il &#x60;Numero&#x60; appropriato, basato sui documenti preesistenti di tipo compatibile). |
 | [**apiVversionCompanyIdListinoPost()**](ListinoApi.md#apiVversionCompanyIdListinoPost) | **POST** /api/v{version}/{companyId}/Listino | Salva un nuovo elemento. |
 
 
@@ -310,7 +310,7 @@ try {
 apiVversionCompanyIdListinoNewGet($version, $company_id): \Amica\Sdk\Model\Listino
 ```
 
-Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile).
+Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di `Documento` avrà il `Numero` appropriato, basato sui documenti preesistenti di tipo compatibile).
 
 ### Example
 

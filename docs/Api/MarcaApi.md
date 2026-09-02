@@ -8,7 +8,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 | [**apiVversionCompanyIdMarcaIdDelete()**](MarcaApi.md#apiVversionCompanyIdMarcaIdDelete) | **DELETE** /api/v{version}/{companyId}/Marca/{id} | Elimina un elemento. |
 | [**apiVversionCompanyIdMarcaIdGet()**](MarcaApi.md#apiVversionCompanyIdMarcaIdGet) | **GET** /api/v{version}/{companyId}/Marca/{id} | Restituisce un elemento. |
 | [**apiVversionCompanyIdMarcaIdPut()**](MarcaApi.md#apiVversionCompanyIdMarcaIdPut) | **PUT** /api/v{version}/{companyId}/Marca/{id} | Aggiorna un elemento esistente. |
-| [**apiVversionCompanyIdMarcaNewGet()**](MarcaApi.md#apiVversionCompanyIdMarcaNewGet) | **GET** /api/v{version}/{companyId}/Marca/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile). |
+| [**apiVversionCompanyIdMarcaNewGet()**](MarcaApi.md#apiVversionCompanyIdMarcaNewGet) | **GET** /api/v{version}/{companyId}/Marca/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di &#x60;Documento&#x60; avrà il &#x60;Numero&#x60; appropriato, basato sui documenti preesistenti di tipo compatibile). |
 | [**apiVversionCompanyIdMarcaPost()**](MarcaApi.md#apiVversionCompanyIdMarcaPost) | **POST** /api/v{version}/{companyId}/Marca | Salva un nuovo elemento. |
 
 
@@ -310,7 +310,7 @@ try {
 apiVversionCompanyIdMarcaNewGet($version, $company_id): \Amica\Sdk\Model\Marca
 ```
 
-Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile).
+Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di `Documento` avrà il `Numero` appropriato, basato sui documenti preesistenti di tipo compatibile).
 
 ### Example
 

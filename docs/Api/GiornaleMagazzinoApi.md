@@ -8,7 +8,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 | [**apiVversionCompanyIdGiornaleMagazzinoIdDelete()**](GiornaleMagazzinoApi.md#apiVversionCompanyIdGiornaleMagazzinoIdDelete) | **DELETE** /api/v{version}/{companyId}/GiornaleMagazzino/{id} | Elimina un elemento. |
 | [**apiVversionCompanyIdGiornaleMagazzinoIdGet()**](GiornaleMagazzinoApi.md#apiVversionCompanyIdGiornaleMagazzinoIdGet) | **GET** /api/v{version}/{companyId}/GiornaleMagazzino/{id} | Restituisce un elemento. |
 | [**apiVversionCompanyIdGiornaleMagazzinoIdPut()**](GiornaleMagazzinoApi.md#apiVversionCompanyIdGiornaleMagazzinoIdPut) | **PUT** /api/v{version}/{companyId}/GiornaleMagazzino/{id} | Aggiorna un elemento esistente. |
-| [**apiVversionCompanyIdGiornaleMagazzinoNewGet()**](GiornaleMagazzinoApi.md#apiVversionCompanyIdGiornaleMagazzinoNewGet) | **GET** /api/v{version}/{companyId}/GiornaleMagazzino/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile). |
+| [**apiVversionCompanyIdGiornaleMagazzinoNewGet()**](GiornaleMagazzinoApi.md#apiVversionCompanyIdGiornaleMagazzinoNewGet) | **GET** /api/v{version}/{companyId}/GiornaleMagazzino/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di &#x60;Documento&#x60; avrà il &#x60;Numero&#x60; appropriato, basato sui documenti preesistenti di tipo compatibile). |
 | [**apiVversionCompanyIdGiornaleMagazzinoPost()**](GiornaleMagazzinoApi.md#apiVversionCompanyIdGiornaleMagazzinoPost) | **POST** /api/v{version}/{companyId}/GiornaleMagazzino | Salva un nuovo elemento. |
 
 
@@ -310,7 +310,7 @@ try {
 apiVversionCompanyIdGiornaleMagazzinoNewGet($version, $company_id): \Amica\Sdk\Model\MovimentoMerceRiga
 ```
 
-Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di Amica.Documento avrà il Amica.Documento.Numero appropriato, basato sui documenti preesistenti di tipo compatibile).
+Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell'applicazione (ad es., una nuova istanza di `Documento` avrà il `Numero` appropriato, basato sui documenti preesistenti di tipo compatibile).
 
 ### Example
 
