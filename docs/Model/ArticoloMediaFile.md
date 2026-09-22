@@ -4,10 +4,10 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**id** | **int** | Identificativo univoco. | [optional]
-**concurrency_token** | **int** | Il token di concorrenza implementa il controllo di concorrenza ottimistica: a ogni operazione di aggiornamento o cancellazione il valore del token sul database viene confrontato con quello sull&#39;entità. Se i valori coincidono, l&#39;operazione viene eseguita; se differiscono, si assume che un altro utente abbia effettuato una scrittura nel frattempo e l&#39;aggiornamento viene rifiutato. | [optional]
-**data** | **string** | Rappresentazione in Base64 del contenuto di un file multimediale. | [optional]
-**articolo_id** | **int** | Identificativo univoco di &#x60;Articolo&#x60;. | [optional]
-**field_name** | **string** | Nome (tipo) dell&#39;informazione. Solitamente &#39;immagine&#39;. | [optional]
+**id** | **int** |  | [optional]
+**concurrency_token** | **int** |  | [optional]
+**data** | **string** |  | [optional]
+**articolo_id** | **int** |  | [optional]
+**field_name** | **string** |  | [optional]
 
 [[Back to Model list]](../../README.md#models) [[Back to API list]](../../README.md#endpoints) [[Back to README]](../../README.md)

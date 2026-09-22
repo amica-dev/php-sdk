@@ -4,9 +4,9 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**registrazione_id** | **int** | Identificativo univoco della &#x60;RegistrazioneContabile&#x60;. | [optional]
-**data** | **\DateTime** | Data della registrazione contabile. | [optional]
-**numero** | **int** | Numero della registrazione contabile. | [optional]
-**errori** | **string[]** | Errori di validazione; vuoto se non ne sono stati trovati. | [optional]
+**registrazione_id** | **int** |  | [optional]
+**data** | **\DateTime** |  | [optional]
+**numero** | **int** |  | [optional]
+**errori** | **string[]** |  | [optional]
 
 [[Back to Model list]](../../README.md#models) [[Back to API list]](../../README.md#endpoints) [[Back to README]](../../README.md)

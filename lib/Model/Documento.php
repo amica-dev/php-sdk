@@ -15,7 +15,7 @@
  *
  * L'Amica Cloud API fornisce accesso programmatico a tutti i dati aziendali gestiti da [Amica 20](https://gestionaleamica.com). Supporta il ciclo completo di documenti, fatture, magazzino, contabilità e anagrafiche. Per guide e documentazione completa, visitare [amica.dev](https://amica.dev/).  ## Autenticazione  Tutte le richieste API richiedono un token OAuth 2.0 Bearer valido, da includere nell'header `Authorization`:  ``` Authorization: Bearer <token> ```  ### Registra la tua app  Per integrare l'Amica Cloud API registra la tua applicazione sull'[**App Store di Amica**](https://apps.amica20.it). Al termine della registrazione ottieni una coppia di credenziali OAuth 2.0 — `client_id` e `client_secret` (il secret è mostrato **una sola volta**) — e scegli gli **scope** e il **flusso di autenticazione** desiderati.  ### Scegli il flusso  La scelta dipende da **come** la tua applicazione si autentica:  - C'è un **utente** che può accedere via browser (web app, SPA, app mobile)? → **Authorization Code con PKCE**. - È un **servizio headless** (backend, batch, integrazione server-to-server) di una **singola azienda**, senza un utente che effettua il login? → **Client Credentials**.  #### Authorization Code con PKCE  Consigliato per le app che operano per conto di un utente Amica ed è l'**unico flusso disponibile per le app pubblicate sul marketplace**. Una sola registrazione serve un numero qualsiasi di aziende: ogni utente autorizza la tua app per la propria azienda tramite la pagina di consenso dell'identity provider, e il token riceve automaticamente il contesto di quell'azienda. La tua app riceve un `code` da scambiare con un access token.  ``` GET  {identity-provider}/connect/authorize?response_type=code&client_id=<client_id>&redirect_uri=<redirect_uri>&scope=openid%20read%20write%20documenti&code_challenge=<challenge>&code_challenge_method=S256 POST {identity-provider}/connect/token      grant_type=authorization_code&code=<code>&code_verifier=<verifier>&client_id=<client_id>&client_secret=<client_secret>&redirect_uri=<redirect_uri> ```  #### Client Credentials  Per integrazioni **server-to-server** senza utente interattivo. Disponibile solo per le **app private**, non per quelle pubblicate sul marketplace. Un'app Client Credentials è **legata a una singola azienda** — quella dell'utente che la registra — e il token ne riceve automaticamente il contesto. Per servire un'azienda diversa serve una registrazione separata; se devi distribuire la stessa app a più aziende usa invece **Authorization Code**.  ``` POST {identity-provider}/connect/token Content-Type: application/x-www-form-urlencoded  grant_type=client_credentials&client_id=<client_id>&client_secret=<client_secret>&scope=comune read write documenti ```  > **Importante:** non includere lo scope `openid` (né `profile`/`email`) in questo flusso. `openid` attiva OpenID Connect — richiede un utente che effettua il login e l'emissione di un ID token — cosa che un flusso server-to-server non prevede: la richiesta viene rifiutata con l'errore `Client cannot request OpenID scopes in client credentials flow`. Indica solo gli scope di risorsa (`comune`, `magazzino`, `documenti`, `contabilita`, ed eventualmente `read`/`write`).  In entrambi i casi la risposta contiene l'`access_token` (JWT con `aud: amica-cloud`) da usare nelle chiamate successive finché non scade (`expires_in`), dopodiché va richiesto un nuovo token. Ogni token contiene uno o più **scope** che determinano le aree accessibili (vedi sotto). Dalla [API Reference](https://amica.dev) è possibile incollare un access token per provare gli endpoint direttamente dal browser.  ## Scope di autorizzazione  L'accesso agli endpoint è governato dagli scope presenti nel token OAuth:  | Scope | Descrizione | |-|-| | `comune` | Anagrafiche: contatti, indirizzi, nazioni, valute, modalità di pagamento, ecc. | | `magazzino` | Magazzino: articoli, listini, movimenti di magazzino, giacenze, distinte base. | | `contabilita` | Contabilità: registrazioni contabili, scadenze, castelletti IVA, fatture elettroniche XML. | | `documenti` | Documenti: fatture, note di credito, DDT, ordini, preventivi, proforma ed emissione. |  Una richiesta verso un endpoint non coperto dallo scope del token riceverà una risposta `403 Forbidden`.  ## Company ID  La maggior parte degli endpoint è relativa a una specifica azienda e segue il pattern:  ``` /api/v3/{companyId}/risorsa ```  Il `companyId` è l'identificativo univoco di ciascun database aziendale. Usare l'endpoint `GET /api/v3/config/Azienda` per ottenere l'elenco delle aziende disponibili.  ## Paginazione  Gli endpoint che restituiscono liste supportano la paginazione tramite query parameter:  | Parametro | Descrizione | |-|-| | `Skip` | Numero di elementi da saltare dall'inizio del set di risultati. | | `Take` | Numero di elementi da includere nella risposta. |  La risposta include due header:  | Header | Descrizione | |-|-| | `X-Read-TotalCount` | Numero totale di elementi che soddisfano il filtro corrente. | | `X-Read-Count` | Numero di elementi effettivamente restituiti nel body della risposta. |  ## Ordinamento e filtri  Gli endpoint lista accettano parametri aggiuntivi:  | Parametro | Descrizione | |-|-| | `Order` | Lista di proprietà per l'ordinamento, separate da virgola. Un segno meno (`-`) prima del nome indica ordine discendente. Es. `-RagioneSociale1,Citta`. | | `Filter` | Condizioni di ricerca: lista di espressioni separate da virgola, ciascuna formata da nome campo, operatore, valore ed eventuale connettore logico. Operatori: `$eq`, `$ne`, `$gt`, `$lt`, `$lte`, `$gte`, `$ct` (contiene), `$nct`, `$sw` (inizia con), `$ew` (finisce con). Connettori: `$and` (default, omissibile) e `$or`; le sotto-query si racchiudono tra `[]`. Es. `RagioneSociale1 $ct acme $or, Fido $gt 1000`. | | `SkipTotalCount` | Se `true`, l'header `X-Read-TotalCount` viene omesso dalla risposta: migliori prestazioni a scapito del conteggio totale. Default `false`. |  ## Espansione oggetti correlati  Gli endpoint singoli e lista supportano il parametro `Expand`. Quando fornito, gli oggetti correlati vengono inclusi inline nella risposta anziché restituiti come riferimenti. È possibile specificare espansioni multiple separate da virgola.  ## Gestione errori  L'API usa codici di stato HTTP standard e restituisce [RFC 7807](https://tools.ietf.org/html/rfc7807) Problem Details in caso di errore:  | Codice | Significato | |-|-| | `400` | Bad Request — validazione fallita o parametro obbligatorio mancante. | | `401` | Unauthorized — token mancante o scaduto. | | `403` | Forbidden — accesso negato (vedi sotto le possibili cause). | | `404` | Not Found — la risorsa richiesta non esiste. | | `409` | Conflict — conflitto di concorrenza. | | `422` | Unprocessable Entity — entità non processabile (es. token di concorrenza obsoleto). |  Un `403` può avere tre cause; nelle ultime due il campo `code` della risposta indica quale:  - il token non possiede lo scope richiesto dall'endpoint; - `code: cloud_not_active` — l'account lavora con una connessione locale e la Cloud API non espone i suoi dati. Per attivare il servizio cloud contatta l'assistenza, poi richiedi un nuovo token: lo stato del servizio è letto al rilascio del token; - `code: company_license_not_active` — la licenza dell'azienda indicata nel percorso è scaduta o non è attiva. Le altre aziende con licenza attiva restano accessibili.  Il motivo dell'errore è sempre nel campo `detail`. Ogni risposta di errore riporta inoltre `overridable`: quando vale `true`, l'errore di validazione è *forzabile* e basta ripetere la stessa richiesta aggiungendo `validationOverride=true` alla query string perché il servizio la accetti. È il caso delle anomalie formali su dati reali — la partita IVA di un fornitore estero, per esempio — che il cliente ha comunque bisogno di registrare.  ## Controllo della concorrenza  Le entità contengono una proprietà `ConcurrencyToken`. Quando si aggiorna un'entità tramite `PUT`, il token nel body della richiesta viene confrontato con il valore memorizzato. Se differiscono, viene restituito un `422 Unprocessable Entity`. Usare sempre l'ultimo token ricevuto da una risposta `GET` o `POST`.
  *
- * The version of the OpenAPI document: 3.0.2
+ * The version of the OpenAPI document: 3.1.0
  * Contact: assistenza@gestionaleamica.com
  * Generated by: https://openapi-generator.tech
  * Generator version: 7.11.0
@@ -36,7 +36,6 @@ use \Amica\Sdk\ObjectSerializer;
  * Documento Class Doc Comment
  *
  * @category Class
- * @description Un documento (fattura, documento di trasporto, ecc.)
  * @package  Amica\Sdk
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
@@ -1209,7 +1208,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets id
      *
-     * @param int|null $id Identificativo univoco.
+     * @param int|null $id id
      *
      * @return self
      */
@@ -1236,7 +1235,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets concurrency_token
      *
-     * @param int|null $concurrency_token Il token di concorrenza implementa il controllo di concorrenza ottimistica: a ogni operazione di aggiornamento o cancellazione il valore del token sul database viene confrontato con quello sull'entità. Se i valori coincidono, l'operazione viene eseguita; se differiscono, si assume che un altro utente abbia effettuato una scrittura nel frattempo e l'aggiornamento viene rifiutato.
+     * @param int|null $concurrency_token concurrency_token
      *
      * @return self
      */
@@ -1263,7 +1262,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets anagrafica_id
      *
-     * @param int|null $anagrafica_id Identificativo univoco di `Anagrafica`.
+     * @param int|null $anagrafica_id anagrafica_id
      *
      * @return self
      */
@@ -1317,7 +1316,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets causale_documento_id
      *
-     * @param int|null $causale_documento_id Identificativo univoco di `CausaleDocumento`.
+     * @param int|null $causale_documento_id causale_documento_id
      *
      * @return self
      */
@@ -1378,7 +1377,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets agente_id
      *
-     * @param int|null $agente_id Identificativo univoco di `Anagrafica` dell'agente.
+     * @param int|null $agente_id agente_id
      *
      * @return self
      */
@@ -1439,7 +1438,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets pagamento_id
      *
-     * @param int|null $pagamento_id Identificativo univoco di `Pagamento`.
+     * @param int|null $pagamento_id pagamento_id
      *
      * @return self
      */
@@ -1500,7 +1499,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets vettore_id
      *
-     * @param int|null $vettore_id Identificativo univoco di `Anagrafica` del vettore.
+     * @param int|null $vettore_id vettore_id
      *
      * @return self
      */
@@ -1561,7 +1560,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets cassa_previdenziale_causale_iva_id
      *
-     * @param int|null $cassa_previdenziale_causale_iva_id Identificativo univoco della causale IVA della cassa previdenziale.
+     * @param int|null $cassa_previdenziale_causale_iva_id cassa_previdenziale_causale_iva_id
      *
      * @return self
      */
@@ -1595,7 +1594,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets modello_id
      *
-     * @param int|null $modello_id Obsoleto. Non utilizzare.
+     * @param int|null $modello_id modello_id
      *
      * @return self
      */
@@ -1656,7 +1655,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets destinazione_id
      *
-     * @param int|null $destinazione_id Identificativo univoco di `Indirizzo` di destinazione.
+     * @param int|null $destinazione_id destinazione_id
      *
      * @return self
      */
@@ -1717,7 +1716,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets valuta_id
      *
-     * @param int|null $valuta_id Identificativo univoco di `Valuta`.
+     * @param int|null $valuta_id valuta_id
      *
      * @return self
      */
@@ -1778,7 +1777,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets causale_magazzino_id
      *
-     * @param int|null $causale_magazzino_id Identificativo univoco di `CausaleMagazzino`.
+     * @param int|null $causale_magazzino_id causale_magazzino_id
      *
      * @return self
      */
@@ -1839,7 +1838,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva1_causale_iva_id
      *
-     * @param int|null $iva1_causale_iva_id Identificativo univoco della prima causale IVA.
+     * @param int|null $iva1_causale_iva_id iva1_causale_iva_id
      *
      * @return self
      */
@@ -1900,7 +1899,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva2_causale_iva_id
      *
-     * @param int|null $iva2_causale_iva_id Identificativo univoco della seconda causale IVA.
+     * @param int|null $iva2_causale_iva_id iva2_causale_iva_id
      *
      * @return self
      */
@@ -1961,7 +1960,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva3_causale_iva_id
      *
-     * @param int|null $iva3_causale_iva_id Identificativo univoco della terza causale IVA.
+     * @param int|null $iva3_causale_iva_id iva3_causale_iva_id
      *
      * @return self
      */
@@ -2022,7 +2021,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva4_causale_iva_id
      *
-     * @param int|null $iva4_causale_iva_id Identificativo univoco della quarta causale IVA.
+     * @param int|null $iva4_causale_iva_id iva4_causale_iva_id
      *
      * @return self
      */
@@ -2083,7 +2082,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets tipo_documento
      *
-     * @param string|null $tipo_documento Tipologia del documento.
+     * @param string|null $tipo_documento tipo_documento
      *
      * @return self
      */
@@ -2120,7 +2119,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets documento_fiscale
      *
-     * @param string|null $documento_fiscale Tipo di documento fiscale.
+     * @param string|null $documento_fiscale documento_fiscale
      *
      * @return self
      */
@@ -2157,7 +2156,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets destinazione_diversa
      *
-     * @param bool|null $destinazione_diversa Indica se la destinazione della merce è diversa dall'indirizzo principale.
+     * @param bool|null $destinazione_diversa destinazione_diversa
      *
      * @return self
      */
@@ -2184,7 +2183,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva_esclusa
      *
-     * @param bool|null $iva_esclusa Indica se i prezzi inseriti sono da considerarsi al netto dell'IVA. Se `false`, l'IVA verrà scorporata in fase di elaborazione (app ufficiali).
+     * @param bool|null $iva_esclusa iva_esclusa
      *
      * @return self
      */
@@ -2211,7 +2210,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets ritenuta_include_cassa_previdenziale
      *
-     * @param bool|null $ritenuta_include_cassa_previdenziale Indica se la ritenuta deve essere applicata anche all'importo della cassa previdenziale riportato nel documento.
+     * @param bool|null $ritenuta_include_cassa_previdenziale ritenuta_include_cassa_previdenziale
      *
      * @return self
      */
@@ -2238,7 +2237,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets classe_documento
      *
-     * @param string|null $classe_documento Classe del documento.
+     * @param string|null $classe_documento classe_documento
      *
      * @return self
      */
@@ -2275,7 +2274,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets contatto
      *
-     * @param int|null $contatto Persona di contatto preferita, `AnagraficaNominativo1` oppure `AnagraficaNominativo2`.
+     * @param int|null $contatto contatto
      *
      * @return self
      */
@@ -2309,7 +2308,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets numero_parte_testo
      *
-     * @param string|null $numero_parte_testo La parte alfanumerica del numero del documento, se presente. Ad esempio, \"bis\" per il documento num. 99/bis.
+     * @param string|null $numero_parte_testo numero_parte_testo
      *
      * @return self
      */
@@ -2350,7 +2349,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets numero_parte_numerica
      *
-     * @param int|null $numero_parte_numerica Il numero del documento, nella sua parte numerica. Ad esempio, 99 per il num. 99/bis.
+     * @param int|null $numero_parte_numerica numero_parte_numerica
      *
      * @return self
      */
@@ -2385,7 +2384,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets data
      *
-     * @param \DateTime|null $data Data del documento.
+     * @param \DateTime|null $data data
      *
      * @return self
      */
@@ -2412,7 +2411,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets stato
      *
-     * @param string|null $stato Lo stato corrente del documento. Ad esempio: Bozza, oppure Emesso.
+     * @param string|null $stato stato
      *
      * @return self
      */
@@ -2449,7 +2448,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets data_scadenza_preventivo
      *
-     * @param \DateTime|null $data_scadenza_preventivo La data di scadenza, nel caso in cui il documento sia un preventivo.
+     * @param \DateTime|null $data_scadenza_preventivo data_scadenza_preventivo
      *
      * @return self
      */
@@ -2483,7 +2482,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets data_inizio_scadenze
      *
-     * @param \DateTime|null $data_inizio_scadenze Data della prima scadenza di pagamento.
+     * @param \DateTime|null $data_inizio_scadenze data_inizio_scadenze
      *
      * @return self
      */
@@ -2517,7 +2516,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets sconto_percentuale
      *
-     * @param float|null $sconto_percentuale Sconto, in percentuale, da calcolare sull'intero importo del documento.
+     * @param float|null $sconto_percentuale sconto_percentuale
      *
      * @return self
      */
@@ -2544,7 +2543,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets sconto_incondizionato_importo
      *
-     * @param float|null $sconto_incondizionato_importo Sconto, in valuta, da applicare all'intero importo del documento.
+     * @param float|null $sconto_incondizionato_importo sconto_incondizionato_importo
      *
      * @return self
      */
@@ -2571,7 +2570,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets abbuono_importo
      *
-     * @param float|null $abbuono_importo Importo dell'abbuono.
+     * @param float|null $abbuono_importo abbuono_importo
      *
      * @return self
      */
@@ -2598,7 +2597,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets ritenuta_percentuale
      *
-     * @param float|null $ritenuta_percentuale Quota della ritenuta da applicare al documento.
+     * @param float|null $ritenuta_percentuale ritenuta_percentuale
      *
      * @return self
      */
@@ -2625,7 +2624,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets enasarco_percentuale
      *
-     * @param float|null $enasarco_percentuale Contributo Enasarco da applicare al documento.
+     * @param float|null $enasarco_percentuale enasarco_percentuale
      *
      * @return self
      */
@@ -2652,7 +2651,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets enasarco_importo
      *
-     * @param float|null $enasarco_importo Importo Enasarco.
+     * @param float|null $enasarco_importo enasarco_importo
      *
      * @return self
      */
@@ -2679,7 +2678,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets quota_ritenuta_su_imponibile
      *
-     * @param float|null $quota_ritenuta_su_imponibile Quota dell'imponibile su cui applicare la ritenuta.
+     * @param float|null $quota_ritenuta_su_imponibile quota_ritenuta_su_imponibile
      *
      * @return self
      */
@@ -2706,7 +2705,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets cambio
      *
-     * @param float|null $cambio Tasso di cambio rispetto all'Euro, nel caso in cui la `Valuta` del documento non sia l'Euro.
+     * @param float|null $cambio cambio
      *
      * @return self
      */
@@ -2733,7 +2732,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets cassa_previdenziale_nome
      *
-     * @param string|null $cassa_previdenziale_nome Nome della cassa previdenziale applicata al documento.
+     * @param string|null $cassa_previdenziale_nome cassa_previdenziale_nome
      *
      * @return self
      */
@@ -2774,7 +2773,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets cassa_previdenziale_percentuale
      *
-     * @param float|null $cassa_previdenziale_percentuale Aliquota (percentuale) della cassa previdenziale da applicare al documento.
+     * @param float|null $cassa_previdenziale_percentuale cassa_previdenziale_percentuale
      *
      * @return self
      */
@@ -2801,7 +2800,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets note
      *
-     * @param string|null $note Note.
+     * @param string|null $note note
      *
      * @return self
      */
@@ -2835,7 +2834,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets sconto_pagamento_percentuale
      *
-     * @param float|null $sconto_pagamento_percentuale Sconto riconosciuto in base alla modalità di pagamento utilizzata (es: +5% in caso di rimessa diretta).
+     * @param float|null $sconto_pagamento_percentuale sconto_pagamento_percentuale
      *
      * @return self
      */
@@ -2862,7 +2861,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva1_imponibile
      *
-     * @param float|null $iva1_imponibile Totale imponibile attribuibile a `Iva1CausaleIva`
+     * @param float|null $iva1_imponibile iva1_imponibile
      *
      * @return self
      */
@@ -2889,7 +2888,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva2_imponibile
      *
-     * @param float|null $iva2_imponibile Totale imponibile attribuibile a `Iva2CausaleIva`
+     * @param float|null $iva2_imponibile iva2_imponibile
      *
      * @return self
      */
@@ -2916,7 +2915,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva3_imponibile
      *
-     * @param float|null $iva3_imponibile Totale imponibile attribuibile a `Iva3CausaleIva`
+     * @param float|null $iva3_imponibile iva3_imponibile
      *
      * @return self
      */
@@ -2943,7 +2942,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva4_imponibile
      *
-     * @param float|null $iva4_imponibile Totale imponibile attribuibile a `Iva4CausaleIva`
+     * @param float|null $iva4_imponibile iva4_imponibile
      *
      * @return self
      */
@@ -2970,7 +2969,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva1_imponibile_lordo
      *
-     * @param float|null $iva1_imponibile_lordo Totale imponibile attribuibile a `Iva1CausaleIva` al lordo di eventuali sconti di fattura.
+     * @param float|null $iva1_imponibile_lordo iva1_imponibile_lordo
      *
      * @return self
      */
@@ -2997,7 +2996,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva2_imponibile_lordo
      *
-     * @param float|null $iva2_imponibile_lordo Totale imponibile attribuibile a `Iva2CausaleIva` al lordo di eventuali sconti di fattura.
+     * @param float|null $iva2_imponibile_lordo iva2_imponibile_lordo
      *
      * @return self
      */
@@ -3024,7 +3023,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva3_imponibile_lordo
      *
-     * @param float|null $iva3_imponibile_lordo Totale imponibile attribuibile a `Iva3CausaleIva` al lordo di eventuali sconti di fattura.
+     * @param float|null $iva3_imponibile_lordo iva3_imponibile_lordo
      *
      * @return self
      */
@@ -3051,7 +3050,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva4_imponibile_lordo
      *
-     * @param float|null $iva4_imponibile_lordo Totale imponibile attribuibile a `Iva4CausaleIva` al lordo di eventuali sconti di fattura.
+     * @param float|null $iva4_imponibile_lordo iva4_imponibile_lordo
      *
      * @return self
      */
@@ -3078,7 +3077,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva1_imposta
      *
-     * @param float|null $iva1_imposta Totale imposta per `Iva1CausaleIva`
+     * @param float|null $iva1_imposta iva1_imposta
      *
      * @return self
      */
@@ -3105,7 +3104,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva2_imposta
      *
-     * @param float|null $iva2_imposta Totale imposta per `Iva2CausaleIva`
+     * @param float|null $iva2_imposta iva2_imposta
      *
      * @return self
      */
@@ -3132,7 +3131,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva3_imposta
      *
-     * @param float|null $iva3_imposta Totale imposta per `Iva3CausaleIva`
+     * @param float|null $iva3_imposta iva3_imposta
      *
      * @return self
      */
@@ -3159,7 +3158,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets iva4_imposta
      *
-     * @param float|null $iva4_imposta Totale imposta per `Iva4CausaleIva`
+     * @param float|null $iva4_imposta iva4_imposta
      *
      * @return self
      */
@@ -3186,7 +3185,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets totale_ritenuta
      *
-     * @param float|null $totale_ritenuta Importo della ritenuta.
+     * @param float|null $totale_ritenuta totale_ritenuta
      *
      * @return self
      */
@@ -3213,7 +3212,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets totale_cassa_previdenziale
      *
-     * @param float|null $totale_cassa_previdenziale Importo della cassa previdenziale.
+     * @param float|null $totale_cassa_previdenziale totale_cassa_previdenziale
      *
      * @return self
      */
@@ -3240,7 +3239,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets totale_spese
      *
-     * @param float|null $totale_spese Totale delle spese esenti e non esenti.
+     * @param float|null $totale_spese totale_spese
      *
      * @return self
      */
@@ -3267,7 +3266,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets totale_spese_esenti
      *
-     * @param float|null $totale_spese_esenti Totale delle spese esenti da IVA.
+     * @param float|null $totale_spese_esenti totale_spese_esenti
      *
      * @return self
      */
@@ -3294,7 +3293,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets totale_spese_non_esenti
      *
-     * @param float|null $totale_spese_non_esenti Totale delle spese non esenti da IVA.
+     * @param float|null $totale_spese_non_esenti totale_spese_non_esenti
      *
      * @return self
      */
@@ -3321,7 +3320,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets totale_merce
      *
-     * @param float|null $totale_merce Importo della merce.
+     * @param float|null $totale_merce totale_merce
      *
      * @return self
      */
@@ -3348,7 +3347,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets totale_merce_scontata
      *
-     * @param float|null $totale_merce_scontata Importo della merce scontata.
+     * @param float|null $totale_merce_scontata totale_merce_scontata
      *
      * @return self
      */
@@ -3375,7 +3374,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets totale_imponibile
      *
-     * @param float|null $totale_imponibile Totale imponibile, considerando tutte le causali IVA coinvolte.
+     * @param float|null $totale_imponibile totale_imponibile
      *
      * @return self
      */
@@ -3402,7 +3401,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets totale_imposta
      *
-     * @param float|null $totale_imposta Imposta IVA.
+     * @param float|null $totale_imposta totale_imposta
      *
      * @return self
      */
@@ -3429,7 +3428,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets totale_esente
      *
-     * @param float|null $totale_esente Importi esenti da IVA.
+     * @param float|null $totale_esente totale_esente
      *
      * @return self
      */
@@ -3456,7 +3455,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets totale_documento
      *
-     * @param float|null $totale_documento Importo totale del documento.
+     * @param float|null $totale_documento totale_documento
      *
      * @return self
      */
@@ -3483,7 +3482,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets netto_a_pagare
      *
-     * @param float|null $netto_a_pagare Netto a pagare.
+     * @param float|null $netto_a_pagare netto_a_pagare
      *
      * @return self
      */
@@ -3510,7 +3509,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets totale_split_payment
      *
-     * @param float|null $totale_split_payment Importo dello split payment.
+     * @param float|null $totale_split_payment totale_split_payment
      *
      * @return self
      */
@@ -3537,7 +3536,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets bollo
      *
-     * @param float|null $bollo Importo del bollo.
+     * @param float|null $bollo bollo
      *
      * @return self
      */
@@ -3564,7 +3563,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets xml_file_name
      *
-     * @param string|null $xml_file_name Nome del file XML.
+     * @param string|null $xml_file_name xml_file_name
      *
      * @return self
      */
@@ -3598,7 +3597,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets riferimento_amministrazione
      *
-     * @param string|null $riferimento_amministrazione Numero di riferimento dell'amministrazione.
+     * @param string|null $riferimento_amministrazione riferimento_amministrazione
      *
      * @return self
      */
@@ -3747,7 +3746,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets righe
      *
-     * @param \Amica\Sdk\Model\BeneServizio[]|null $righe Righe del documento.
+     * @param \Amica\Sdk\Model\BeneServizio[]|null $righe righe
      *
      * @return self
      */
@@ -3781,7 +3780,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets spese_documento
      *
-     * @param \Amica\Sdk\Model\SpesaDocumento[]|null $spese_documento Elenco delle spese.
+     * @param \Amica\Sdk\Model\SpesaDocumento[]|null $spese_documento spese_documento
      *
      * @return self
      */
@@ -3815,7 +3814,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets scadenze
      *
-     * @param \Amica\Sdk\Model\Scadenza[]|null $scadenze Elenco delle scadenze.
+     * @param \Amica\Sdk\Model\Scadenza[]|null $scadenze scadenze
      *
      * @return self
      */
@@ -3849,7 +3848,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets numero
      *
-     * @param string|null $numero Numero completo del documento. Ad esempio, `99/bis`. Generato a partire da `NumeroParteNumerica` e `NumeroParteTesto`. Nota bene: proprietà valorizzata solo nel caso di un'istanza salvata sul backend.
+     * @param string|null $numero numero
      *
      * @return self
      */
@@ -3910,7 +3909,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets allegato
      *
-     * @param string|null $allegato Obsoleto. Non utilizzare.
+     * @param string|null $allegato allegato
      *
      * @return self
      */
@@ -3944,7 +3943,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets bonus_fiscale_causale
      *
-     * @param string|null $bonus_fiscale_causale Causale del bonus fiscale.
+     * @param string|null $bonus_fiscale_causale bonus_fiscale_causale
      *
      * @return self
      */
@@ -3978,7 +3977,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets bonus_fiscale_importo
      *
-     * @param float|null $bonus_fiscale_importo Importo del bonus fiscale.
+     * @param float|null $bonus_fiscale_importo bonus_fiscale_importo
      *
      * @return self
      */
@@ -4005,7 +4004,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets bonus_fiscale_percentuale
      *
-     * @param float|null $bonus_fiscale_percentuale Percentuale del bonus fiscale.
+     * @param float|null $bonus_fiscale_percentuale bonus_fiscale_percentuale
      *
      * @return self
      */
@@ -4032,7 +4031,7 @@ class Documento implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets progressivo_invio
      *
-     * @param \Amica\Sdk\Model\ProgressivoInvio[]|null $progressivo_invio Numeri di invio (progressivi), così come restituiti dallo Sdi.
+     * @param \Amica\Sdk\Model\ProgressivoInvio[]|null $progressivo_invio progressivo_invio
      *
      * @return self
      */

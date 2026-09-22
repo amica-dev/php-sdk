@@ -43,7 +43,6 @@ docs/Api/PrezzoApi.md
 docs/Api/ProduttoreApi.md
 docs/Api/ProgressivoInvioApi.md
 docs/Api/RegistrazioneContabileApi.md
-docs/Api/RepartoApi.md
 docs/Api/RisorsaFinanziariaApi.md
 docs/Api/ScadenzaApi.md
 docs/Api/SituazioneApi.md
@@ -184,7 +183,6 @@ lib/Api/PrezzoApi.php
 lib/Api/ProduttoreApi.php
 lib/Api/ProgressivoInvioApi.php
 lib/Api/RegistrazioneContabileApi.php
-lib/Api/RepartoApi.php
 lib/Api/RisorsaFinanziariaApi.php
 lib/Api/ScadenzaApi.php
 lib/Api/SituazioneApi.php
@@ -330,7 +328,6 @@ test/Api/PrezzoApiTest.php
 test/Api/ProduttoreApiTest.php
 test/Api/ProgressivoInvioApiTest.php
 test/Api/RegistrazioneContabileApiTest.php
-test/Api/RepartoApiTest.php
 test/Api/RisorsaFinanziariaApiTest.php
 test/Api/ScadenzaApiTest.php
 test/Api/SituazioneApiTest.php
