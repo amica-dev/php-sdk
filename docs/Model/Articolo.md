@@ -18,8 +18,6 @@ Name | Type | Description | Notes
 **marca** | [**\Amica\Sdk\Model\Marca**](Marca.md) |  | [optional]
 **produttore_id** | **int** |  | [optional]
 **produttore** | [**\Amica\Sdk\Model\Produttore**](Produttore.md) |  | [optional]
-**reparto_id** | **int** |  | [optional]
-**reparto** | [**\Amica\Sdk\Model\Reparto**](Reparto.md) |  | [optional]
 **nome** | **string** |  |
 **codice** | **string** |  |
 **nome_breve** | **string** |  | [optional]

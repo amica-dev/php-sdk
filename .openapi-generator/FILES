@@ -129,7 +129,6 @@ docs/Model/ProgressivoInvio.md
 docs/Model/RegistrazioneContabile.md
 docs/Model/RegistrazioneContabileRiga.md
 docs/Model/RegistrazioneContabileValidationResult.md
-docs/Model/Reparto.md
 docs/Model/ResoImportData.md
 docs/Model/RicercaArticolo.md
 docs/Model/RisorsaFinanziaria.md
@@ -273,7 +272,6 @@ lib/Model/ProgressivoInvio.php
 lib/Model/RegistrazioneContabile.php
 lib/Model/RegistrazioneContabileRiga.php
 lib/Model/RegistrazioneContabileValidationResult.php
-lib/Model/Reparto.php
 lib/Model/ResoImportData.php
 lib/Model/RicercaArticolo.php
 lib/Model/RisorsaFinanziaria.php
@@ -414,7 +412,6 @@ test/Model/ProgressivoInvioTest.php
 test/Model/RegistrazioneContabileRigaTest.php
 test/Model/RegistrazioneContabileTest.php
 test/Model/RegistrazioneContabileValidationResultTest.php
-test/Model/RepartoTest.php
 test/Model/ResoImportDataTest.php
 test/Model/RicercaArticoloTest.php
 test/Model/RisorsaFinanziariaTest.php
