@@ -28,6 +28,7 @@ docs/Api/GiacenzaApi.md
 docs/Api/GiornaleMagazzinoApi.md
 docs/Api/GruppoMerceologicoApi.md
 docs/Api/IndirizzoApi.md
+docs/Api/InventarioApi.md
 docs/Api/ListinoApi.md
 docs/Api/MagazzinoApi.md
 docs/Api/MarcaApi.md
@@ -92,6 +93,7 @@ docs/Model/DocumentoComputeResult.md
 docs/Model/DocumentoComputeResultRiepilogoIva.md
 docs/Model/DocumentoImportData.md
 docs/Model/DocumentoMediaFile.md
+docs/Model/DocumentoTotali.md
 docs/Model/FatturaElettronicaExportOptions.md
 docs/Model/FatturaElettronicaExportResult.md
 docs/Model/FatturaElettronicaImportResult.md
@@ -107,6 +109,9 @@ docs/Model/Giacenza.md
 docs/Model/GruppoMerceologico.md
 docs/Model/ImpostazioniSdi.md
 docs/Model/Indirizzo.md
+docs/Model/Inventario.md
+docs/Model/InventarioComputeResult.md
+docs/Model/InventarioRiga.md
 docs/Model/Listino.md
 docs/Model/Magazzino.md
 docs/Model/Marca.md
@@ -167,6 +172,7 @@ lib/Api/GiacenzaApi.php
 lib/Api/GiornaleMagazzinoApi.php
 lib/Api/GruppoMerceologicoApi.php
 lib/Api/IndirizzoApi.php
+lib/Api/InventarioApi.php
 lib/Api/ListinoApi.php
 lib/Api/MagazzinoApi.php
 lib/Api/MarcaApi.php
@@ -234,6 +240,7 @@ lib/Model/DocumentoComputeResult.php
 lib/Model/DocumentoComputeResultRiepilogoIva.php
 lib/Model/DocumentoImportData.php
 lib/Model/DocumentoMediaFile.php
+lib/Model/DocumentoTotali.php
 lib/Model/FatturaElettronicaExportOptions.php
 lib/Model/FatturaElettronicaExportResult.php
 lib/Model/FatturaElettronicaImportResult.php
@@ -249,6 +256,9 @@ lib/Model/Giacenza.php
 lib/Model/GruppoMerceologico.php
 lib/Model/ImpostazioniSdi.php
 lib/Model/Indirizzo.php
+lib/Model/Inventario.php
+lib/Model/InventarioComputeResult.php
+lib/Model/InventarioRiga.php
 lib/Model/Listino.php
 lib/Model/Magazzino.php
 lib/Model/Marca.php
@@ -311,6 +321,7 @@ test/Api/GiacenzaApiTest.php
 test/Api/GiornaleMagazzinoApiTest.php
 test/Api/GruppoMerceologicoApiTest.php
 test/Api/IndirizzoApiTest.php
+test/Api/InventarioApiTest.php
 test/Api/ListinoApiTest.php
 test/Api/MagazzinoApiTest.php
 test/Api/MarcaApiTest.php
@@ -375,6 +386,7 @@ test/Model/DocumentoComputeResultTest.php
 test/Model/DocumentoImportDataTest.php
 test/Model/DocumentoMediaFileTest.php
 test/Model/DocumentoTest.php
+test/Model/DocumentoTotaliTest.php
 test/Model/FatturaElettronicaExportOptionsTest.php
 test/Model/FatturaElettronicaExportResultTest.php
 test/Model/FatturaElettronicaImportResultTest.php
@@ -390,6 +402,9 @@ test/Model/GiacenzaTest.php
 test/Model/GruppoMerceologicoTest.php
 test/Model/ImpostazioniSdiTest.php
 test/Model/IndirizzoTest.php
+test/Model/InventarioComputeResultTest.php
+test/Model/InventarioRigaTest.php
+test/Model/InventarioTest.php
 test/Model/ListinoTest.php
 test/Model/MagazzinoTest.php
 test/Model/MarcaTest.php

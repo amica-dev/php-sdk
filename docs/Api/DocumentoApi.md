@@ -21,6 +21,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 | [**apiVversionCompanyIdDocumentoNewGet()**](DocumentoApi.md#apiVversionCompanyIdDocumentoNewGet) | **GET** /api/v{version}/{companyId}/Documento/new | Restituisce una nuova istanza di un documento del tipo specificato. |
 | [**apiVversionCompanyIdDocumentoPeriodicinvoicingPost()**](DocumentoApi.md#apiVversionCompanyIdDocumentoPeriodicinvoicingPost) | **POST** /api/v{version}/{companyId}/Documento/periodicinvoicing | Genera fatture per tutti i contatti che corrispondono ai criteri di fatturazione periodica. |
 | [**apiVversionCompanyIdDocumentoPost()**](DocumentoApi.md#apiVversionCompanyIdDocumentoPost) | **POST** /api/v{version}/{companyId}/Documento | Salva un nuovo elemento. |
+| [**apiVversionCompanyIdDocumentoTotaliGet()**](DocumentoApi.md#apiVversionCompanyIdDocumentoTotaliGet) | **GET** /api/v{version}/{companyId}/Documento/totali | Restituisce i totali dei documenti che soddisfano il filtro, eventualmente raggruppati per mese, anno o anagrafica. I totali sono calcolati dal server: per conoscere il fatturato di un periodo non serve scaricare i documenti. |
 
 
 ## `apiVversionCompanyIdDocumentoComputePost()`
@@ -1251,6 +1252,78 @@ try {
 ### HTTP request headers
 
 - **Content-Type**: `application/json`, `text/json`, `application/*+json`
+- **Accept**: `application/json`, `application/problem+json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `apiVversionCompanyIdDocumentoTotaliGet()`
+
+```php
+apiVversionCompanyIdDocumentoTotaliGet($version, $company_id, $filter, $raggruppa): \Amica\Sdk\Model\DocumentoTotali[]
+```
+
+Restituisce i totali dei documenti che soddisfano il filtro, eventualmente raggruppati per mese, anno o anagrafica. I totali sono calcolati dal server: per conoscere il fatturato di un periodo non serve scaricare i documenti.
+
+Le note di credito, clienti e fornitori, entrano nei totali con segno negativo.  Senza raggruppamento la risposta contiene un solo gruppo, anche se nessun documento soddisfa il filtro.             Raggruppando per mese o per anno i gruppi sono in ordine cronologico e `Periodo` ne indica il primo giorno;             raggruppando per anagrafica sono in ordine di totale documento decrescente, con `AnagraficaId` e             `RagioneSociale`.
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer (JWT) authorization: bearer
+$config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
+$config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+// Configure OAuth2 access token for authorization: oauth2
+$config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Amica\Sdk\Api\DocumentoApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$version = 'version_example'; // string | Versione API.
+$company_id = 'company_id_example'; // string | ID univoco dell'azienda.
+$filter = ClasseDocumento $eq 1, Data $gte 2026-01-01, Data $lte 2026-09-30; // string | Condizioni di ricerca che selezionano i documenti da sommare, con la stessa sintassi del parametro `Filter` dell'elenco dei documenti. Senza filtro si sommano tutti i documenti dell'azienda, compresi ordini e preventivi: per il fatturato, filtrare per classe e tipo di documento.
+$raggruppa = Mese; // string | Come raggruppare i totali: `Nessuno` (un solo gruppo, predefinito), `Mese`, `Anno` o `Anagrafica`.
+
+try {
+    $result = $apiInstance->apiVversionCompanyIdDocumentoTotaliGet($version, $company_id, $filter, $raggruppa);
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling DocumentoApi->apiVversionCompanyIdDocumentoTotaliGet: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **version** | **string**| Versione API. | |
+| **company_id** | **string**| ID univoco dell&#39;azienda. | |
+| **filter** | **string**| Condizioni di ricerca che selezionano i documenti da sommare, con la stessa sintassi del parametro &#x60;Filter&#x60; dell&#39;elenco dei documenti. Senza filtro si sommano tutti i documenti dell&#39;azienda, compresi ordini e preventivi: per il fatturato, filtrare per classe e tipo di documento. | [optional] |
+| **raggruppa** | **string**| Come raggruppare i totali: &#x60;Nessuno&#x60; (un solo gruppo, predefinito), &#x60;Mese&#x60;, &#x60;Anno&#x60; o &#x60;Anagrafica&#x60;. | [optional] |
+
+### Return type
+
+[**\Amica\Sdk\Model\DocumentoTotali[]**](../Model/DocumentoTotali.md)
+
+### Authorization
+
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
 - **Accept**: `application/json`, `application/problem+json`
 
 [[Back to top]](#) [[Back to API list]](../../README.md#endpoints)

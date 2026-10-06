@@ -4,6 +4,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 
 | Method | HTTP request | Description |
 | ------------- | ------------- | ------------- |
+| [**apiVversionCompanyIdMovimentoMerceDistinctGet()**](MovimentoMerceApi.md#apiVversionCompanyIdMovimentoMerceDistinctGet) | **GET** /api/v{version}/{companyId}/MovimentoMerce/distinct | Restituisce una lista di elementi distinti. |
 | [**apiVversionCompanyIdMovimentoMerceGet()**](MovimentoMerceApi.md#apiVversionCompanyIdMovimentoMerceGet) | **GET** /api/v{version}/{companyId}/MovimentoMerce | Restituisce una lista di elementi. |
 | [**apiVversionCompanyIdMovimentoMerceIdDelete()**](MovimentoMerceApi.md#apiVversionCompanyIdMovimentoMerceIdDelete) | **DELETE** /api/v{version}/{companyId}/MovimentoMerce/{id} | Elimina un elemento. |
 | [**apiVversionCompanyIdMovimentoMerceIdGet()**](MovimentoMerceApi.md#apiVversionCompanyIdMovimentoMerceIdGet) | **GET** /api/v{version}/{companyId}/MovimentoMerce/{id} | Restituisce un elemento. |
@@ -11,6 +12,78 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 | [**apiVversionCompanyIdMovimentoMerceNewGet()**](MovimentoMerceApi.md#apiVversionCompanyIdMovimentoMerceNewGet) | **GET** /api/v{version}/{companyId}/MovimentoMerce/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di &#x60;Documento&#x60; avrà il &#x60;Numero&#x60; appropriato, basato sui documenti preesistenti di tipo compatibile). |
 | [**apiVversionCompanyIdMovimentoMercePost()**](MovimentoMerceApi.md#apiVversionCompanyIdMovimentoMercePost) | **POST** /api/v{version}/{companyId}/MovimentoMerce | Salva un nuovo elemento. |
 
+
+## `apiVversionCompanyIdMovimentoMerceDistinctGet()`
+
+```php
+apiVversionCompanyIdMovimentoMerceDistinctGet($version, $company_id, $selector, $skip, $take): \Amica\Sdk\Model\DistinctPropertyGroup[]
+```
+
+Restituisce una lista di elementi distinti.
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer (JWT) authorization: bearer
+$config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
+$config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+// Configure OAuth2 access token for authorization: oauth2
+$config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Amica\Sdk\Api\MovimentoMerceApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$version = 'version_example'; // string | Versione API.
+$company_id = 'company_id_example'; // string | ID univoco dell'azienda.
+$selector = RagioneSociale1; // string | Il campo usato per distinguere gli elementi.
+$skip = 100; // int | Numero di elementi, a partire dal primo, da escludere dal risultato. Combinato con `Take`, è utile per la paginazione.
+$take = 25; // int | Numero di elementi da includere nel risultato. Combinato con `Skip`, è utile per la paginazione.
+
+try {
+    $result = $apiInstance->apiVversionCompanyIdMovimentoMerceDistinctGet($version, $company_id, $selector, $skip, $take);
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling MovimentoMerceApi->apiVversionCompanyIdMovimentoMerceDistinctGet: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **version** | **string**| Versione API. | |
+| **company_id** | **string**| ID univoco dell&#39;azienda. | |
+| **selector** | **string**| Il campo usato per distinguere gli elementi. | |
+| **skip** | **int**| Numero di elementi, a partire dal primo, da escludere dal risultato. Combinato con &#x60;Take&#x60;, è utile per la paginazione. | [optional] |
+| **take** | **int**| Numero di elementi da includere nel risultato. Combinato con &#x60;Skip&#x60;, è utile per la paginazione. | [optional] |
+
+### Return type
+
+[**\Amica\Sdk\Model\DistinctPropertyGroup[]**](../Model/DistinctPropertyGroup.md)
+
+### Authorization
+
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`, `application/problem+json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
 
 ## `apiVversionCompanyIdMovimentoMerceGet()`
 

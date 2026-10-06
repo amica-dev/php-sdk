@@ -7,6 +7,7 @@ Name | Type | Description | Notes
 **id** | **int** |  | [optional]
 **concurrency_token** | **int** |  | [optional]
 **movimento_merce_id** | **int** |  | [optional]
+**movimento_merce** | [**\Amica\Sdk\Model\MovimentoMerce**](MovimentoMerce.md) |  | [optional]
 **articolo_id** | **int** |  | [optional]
 **articolo** | [**\Amica\Sdk\Model\Articolo**](Articolo.md) |  | [optional]
 **listino_id** | **int** |  | [optional]
