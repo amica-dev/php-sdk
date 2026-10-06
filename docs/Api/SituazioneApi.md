@@ -4,14 +4,14 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 
 | Method | HTTP request | Description |
 | ------------- | ------------- | ------------- |
-| [**apiVversionCompanyIdSituazioneCreditodebitomensileGet()**](SituazioneApi.md#apiVversionCompanyIdSituazioneCreditodebitomensileGet) | **GET** /api/v{version}/{companyId}/Situazione/creditodebitomensile | Restituisce i saldi mensili di credito e debito dell&#39;azienda. |
-| [**apiVversionCompanyIdSituazioneFatturatomensileGet()**](SituazioneApi.md#apiVversionCompanyIdSituazioneFatturatomensileGet) | **GET** /api/v{version}/{companyId}/Situazione/fatturatomensile | Restituisce il fatturato mensile dell&#39;azienda. |
+| [**situazioneGetCreditoDebitoMensile()**](SituazioneApi.md#situazioneGetCreditoDebitoMensile) | **GET** /api/v3/{companyId}/Situazione/creditodebitomensile | Restituisce i saldi mensili di credito e debito dell&#39;azienda. |
+| [**situazioneGetFatturatoMensile()**](SituazioneApi.md#situazioneGetFatturatoMensile) | **GET** /api/v3/{companyId}/Situazione/fatturatomensile | Restituisce il fatturato mensile dell&#39;azienda. |
 
 
-## `apiVversionCompanyIdSituazioneCreditodebitomensileGet()`
+## `situazioneGetCreditoDebitoMensile()`
 
 ```php
-apiVversionCompanyIdSituazioneCreditodebitomensileGet($company_id, $version): \Amica\Sdk\Model\CreditoDebitoMensile[]
+situazioneGetCreditoDebitoMensile($company_id): \Amica\Sdk\Model\CreditoDebitoMensile[]
 ```
 
 Restituisce i saldi mensili di credito e debito dell'azienda.
@@ -40,13 +40,12 @@ $apiInstance = new Amica\Sdk\Api\SituazioneApi(
     $config
 );
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
-$version = 'version_example'; // string
 
 try {
-    $result = $apiInstance->apiVversionCompanyIdSituazioneCreditodebitomensileGet($company_id, $version);
+    $result = $apiInstance->situazioneGetCreditoDebitoMensile($company_id);
     print_r($result);
 } catch (Exception $e) {
-    echo 'Exception when calling SituazioneApi->apiVversionCompanyIdSituazioneCreditodebitomensileGet: ', $e->getMessage(), PHP_EOL;
+    echo 'Exception when calling SituazioneApi->situazioneGetCreditoDebitoMensile: ', $e->getMessage(), PHP_EOL;
 }
 ```
 
@@ -55,7 +54,6 @@ try {
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
-| **version** | **string**|  | |
 
 ### Return type
 
@@ -74,10 +72,10 @@ try {
 [[Back to Model list]](../../README.md#models)
 [[Back to README]](../../README.md)
 
-## `apiVversionCompanyIdSituazioneFatturatomensileGet()`
+## `situazioneGetFatturatoMensile()`
 
 ```php
-apiVversionCompanyIdSituazioneFatturatomensileGet($company_id, $version): \Amica\Sdk\Model\FatturatoMensile[]
+situazioneGetFatturatoMensile($company_id): \Amica\Sdk\Model\FatturatoMensile[]
 ```
 
 Restituisce il fatturato mensile dell'azienda.
@@ -106,13 +104,12 @@ $apiInstance = new Amica\Sdk\Api\SituazioneApi(
     $config
 );
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
-$version = 'version_example'; // string
 
 try {
-    $result = $apiInstance->apiVversionCompanyIdSituazioneFatturatomensileGet($company_id, $version);
+    $result = $apiInstance->situazioneGetFatturatoMensile($company_id);
     print_r($result);
 } catch (Exception $e) {
-    echo 'Exception when calling SituazioneApi->apiVversionCompanyIdSituazioneFatturatomensileGet: ', $e->getMessage(), PHP_EOL;
+    echo 'Exception when calling SituazioneApi->situazioneGetFatturatoMensile: ', $e->getMessage(), PHP_EOL;
 }
 ```
 
@@ -121,7 +118,6 @@ try {
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
-| **version** | **string**|  | |
 
 ### Return type
 

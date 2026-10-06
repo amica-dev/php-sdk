@@ -14,7 +14,7 @@
  *
  * L'Amica Cloud API fornisce accesso programmatico a tutti i dati aziendali gestiti da [Amica 20](https://gestionaleamica.com). Supporta il ciclo completo di documenti, fatture, magazzino, contabilità e anagrafiche. Per guide e documentazione completa, visitare [amica.dev](https://amica.dev/).  ## Autenticazione  Tutte le richieste API richiedono un token OAuth 2.0 Bearer valido, da includere nell'header `Authorization`:  ``` Authorization: Bearer <token> ```  ### Registra la tua app  Per integrare l'Amica Cloud API registra la tua applicazione sull'[**App Store di Amica**](https://apps.amica20.it). Al termine della registrazione ottieni una coppia di credenziali OAuth 2.0 — `client_id` e `client_secret` (il secret è mostrato **una sola volta**) — e scegli gli **scope** e il **flusso di autenticazione** desiderati.  ### Scegli il flusso  La scelta dipende da **come** la tua applicazione si autentica:  - C'è un **utente** che può accedere via browser (web app, SPA, app mobile)? → **Authorization Code con PKCE**. - È un **servizio headless** (backend, batch, integrazione server-to-server) di una **singola azienda**, senza un utente che effettua il login? → **Client Credentials**.  #### Authorization Code con PKCE  Consigliato per le app che operano per conto di un utente Amica ed è l'**unico flusso disponibile per le app pubblicate sul marketplace**. Una sola registrazione serve un numero qualsiasi di aziende: ogni utente autorizza la tua app per la propria azienda tramite la pagina di consenso dell'identity provider, e il token riceve automaticamente il contesto di quell'azienda. La tua app riceve un `code` da scambiare con un access token.  ``` GET  {identity-provider}/connect/authorize?response_type=code&client_id=<client_id>&redirect_uri=<redirect_uri>&scope=openid%20read%20write%20documenti&code_challenge=<challenge>&code_challenge_method=S256 POST {identity-provider}/connect/token      grant_type=authorization_code&code=<code>&code_verifier=<verifier>&client_id=<client_id>&client_secret=<client_secret>&redirect_uri=<redirect_uri> ```  #### Client Credentials  Per integrazioni **server-to-server** senza utente interattivo. Disponibile solo per le **app private**, non per quelle pubblicate sul marketplace. Un'app Client Credentials è **legata a una singola azienda** — quella dell'utente che la registra — e il token ne riceve automaticamente il contesto. Per servire un'azienda diversa serve una registrazione separata; se devi distribuire la stessa app a più aziende usa invece **Authorization Code**.  ``` POST {identity-provider}/connect/token Content-Type: application/x-www-form-urlencoded  grant_type=client_credentials&client_id=<client_id>&client_secret=<client_secret>&scope=comune read write documenti ```  > **Importante:** non includere lo scope `openid` (né `profile`/`email`) in questo flusso. `openid` attiva OpenID Connect — richiede un utente che effettua il login e l'emissione di un ID token — cosa che un flusso server-to-server non prevede: la richiesta viene rifiutata con l'errore `Client cannot request OpenID scopes in client credentials flow`. Indica solo gli scope di risorsa (`comune`, `magazzino`, `documenti`, `contabilita`, ed eventualmente `read`/`write`).  In entrambi i casi la risposta contiene l'`access_token` (JWT con `aud: amica-cloud`) da usare nelle chiamate successive finché non scade (`expires_in`), dopodiché va richiesto un nuovo token. Ogni token contiene uno o più **scope** che determinano le aree accessibili (vedi sotto). Dalla [API Reference](https://amica.dev) è possibile incollare un access token per provare gli endpoint direttamente dal browser.  ## Scope di autorizzazione  L'accesso agli endpoint è governato dagli scope presenti nel token OAuth:  | Scope | Descrizione | |-|-| | `comune` | Anagrafiche: contatti, indirizzi, nazioni, valute, modalità di pagamento, ecc. | | `magazzino` | Magazzino: articoli, listini, movimenti di magazzino, giacenze, distinte base. | | `contabilita` | Contabilità: registrazioni contabili, scadenze, castelletti IVA, fatture elettroniche XML. | | `documenti` | Documenti: fatture, note di credito, DDT, ordini, preventivi, proforma ed emissione. |  Una richiesta verso un endpoint non coperto dallo scope del token riceverà una risposta `403 Forbidden`.  ## Company ID  La maggior parte degli endpoint è relativa a una specifica azienda e segue il pattern:  ``` /api/v3/{companyId}/risorsa ```  Il `companyId` è l'identificativo univoco di ciascun database aziendale. Usare l'endpoint `GET /api/v3/config/Azienda` per ottenere l'elenco delle aziende disponibili.  ## Paginazione  Gli endpoint che restituiscono liste supportano la paginazione tramite query parameter:  | Parametro | Descrizione | |-|-| | `Skip` | Numero di elementi da saltare dall'inizio del set di risultati. | | `Take` | Numero di elementi da includere nella risposta. |  La risposta include due header:  | Header | Descrizione | |-|-| | `X-Read-TotalCount` | Numero totale di elementi che soddisfano il filtro corrente. | | `X-Read-Count` | Numero di elementi effettivamente restituiti nel body della risposta. |  ## Ordinamento e filtri  Gli endpoint lista accettano parametri aggiuntivi:  | Parametro | Descrizione | |-|-| | `Order` | Lista di proprietà per l'ordinamento, separate da virgola. Un segno meno (`-`) prima del nome indica ordine discendente. Es. `-RagioneSociale1,Citta`. | | `Filter` | Condizioni di ricerca: lista di espressioni separate da virgola, ciascuna formata da nome campo, operatore, valore ed eventuale connettore logico. Operatori: `$eq`, `$ne`, `$gt`, `$lt`, `$lte`, `$gte`, `$ct` (contiene), `$nct`, `$sw` (inizia con), `$ew` (finisce con). Connettori: `$and` (default, omissibile) e `$or`; le sotto-query si racchiudono tra `[]`. Es. `RagioneSociale1 $ct acme $or, Fido $gt 1000`. | | `SkipTotalCount` | Se `true`, l'header `X-Read-TotalCount` viene omesso dalla risposta: migliori prestazioni a scapito del conteggio totale. Default `false`. |  ## Espansione oggetti correlati  Gli endpoint singoli e lista supportano il parametro `Expand`. Quando fornito, gli oggetti correlati vengono inclusi inline nella risposta anziché restituiti come riferimenti. È possibile specificare espansioni multiple separate da virgola.  ## Gestione errori  L'API usa codici di stato HTTP standard e restituisce [RFC 7807](https://tools.ietf.org/html/rfc7807) Problem Details in caso di errore:  | Codice | Significato | |-|-| | `400` | Bad Request — validazione fallita o parametro obbligatorio mancante. | | `401` | Unauthorized — token mancante o scaduto. | | `403` | Forbidden — accesso negato (vedi sotto le possibili cause). | | `404` | Not Found — la risorsa richiesta non esiste. | | `409` | Conflict — conflitto di concorrenza. | | `422` | Unprocessable Entity — entità non processabile (es. token di concorrenza obsoleto). |  Un `403` può avere tre cause; nelle ultime due il campo `code` della risposta indica quale:  - il token non possiede lo scope richiesto dall'endpoint; - `code: cloud_not_active` — l'account lavora con una connessione locale e la Cloud API non espone i suoi dati. Per attivare il servizio cloud contatta l'assistenza, poi richiedi un nuovo token: lo stato del servizio è letto al rilascio del token; - `code: company_license_not_active` — la licenza dell'azienda indicata nel percorso è scaduta o non è attiva. Le altre aziende con licenza attiva restano accessibili.  Il motivo dell'errore è sempre nel campo `detail`. Ogni risposta di errore riporta inoltre `overridable`: quando vale `true`, l'errore di validazione è *forzabile* e basta ripetere la stessa richiesta aggiungendo `validationOverride=true` alla query string perché il servizio la accetti. È il caso delle anomalie formali su dati reali — la partita IVA di un fornitore estero, per esempio — che il cliente ha comunque bisogno di registrare.  ## Controllo della concorrenza  Le entità contengono una proprietà `ConcurrencyToken`. Quando si aggiorna un'entità tramite `PUT`, il token nel body della richiesta viene confrontato con il valore memorizzato. Se differiscono, viene restituito un `422 Unprocessable Entity`. Usare sempre l'ultimo token ricevuto da una risposta `GET` o `POST`.
  *
- * The version of the OpenAPI document: 3.1.5
+ * The version of the OpenAPI document: 3.1.6
  * Contact: assistenza@gestionaleamica.com
  * Generated by: https://openapi-generator.tech
  * Generator version: 7.11.0
@@ -72,27 +72,27 @@ class AnagraficaApi
 
     /** @var string[] $contentTypes **/
     public const contentTypes = [
-        'apiVversionCompanyIdAnagraficaDistinctGet' => [
+        'anagraficaDelete' => [
             'application/json',
         ],
-        'apiVversionCompanyIdAnagraficaGet' => [
+        'anagraficaDistinct' => [
             'application/json',
         ],
-        'apiVversionCompanyIdAnagraficaIdDelete' => [
+        'anagraficaGet' => [
             'application/json',
         ],
-        'apiVversionCompanyIdAnagraficaIdGet' => [
+        'anagraficaList' => [
             'application/json',
         ],
-        'apiVversionCompanyIdAnagraficaIdPut' => [
+        'anagraficaNewInstance' => [
+            'application/json',
+        ],
+        'anagraficaPost' => [
             'application/json',
             'text/json',
             'application/*+json',
         ],
-        'apiVversionCompanyIdAnagraficaNewGet' => [
-            'application/json',
-        ],
-        'apiVversionCompanyIdAnagraficaPost' => [
+        'anagraficaPut' => [
             'application/json',
             'text/json',
             'application/*+json',
@@ -146,46 +146,489 @@ class AnagraficaApi
     }
 
     /**
-     * Operation apiVversionCompanyIdAnagraficaDistinctGet
+     * Operation anagraficaDelete
+     *
+     * Elimina un elemento.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  int $id ID dell&#39;elemento da eliminare. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaDelete'] to see the possible values for this operation
+     *
+     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
+     */
+    public function anagraficaDelete($company_id, $id, string $contentType = self::contentTypes['anagraficaDelete'][0])
+    {
+        list($response) = $this->anagraficaDeleteWithHttpInfo($company_id, $id, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation anagraficaDeleteWithHttpInfo
+     *
+     * Elimina un elemento.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  int $id ID dell&#39;elemento da eliminare. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaDelete'] to see the possible values for this operation
+     *
+     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function anagraficaDeleteWithHttpInfo($company_id, $id, string $contentType = self::contentTypes['anagraficaDelete'][0])
+    {
+        $request = $this->anagraficaDeleteRequest($company_id, $id, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    if ('\Amica\Sdk\Model\Anagrafica' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\Anagrafica' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\Anagrafica', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                case 404:
+                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                case 400:
+                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                case 403:
+                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+            }
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            $returnType = '\Amica\Sdk\Model\Anagrafica';
+            if ($returnType === '\SplFileObject') {
+                $content = $response->getBody(); //stream goes to serializer
+            } else {
+                $content = (string) $response->getBody();
+                if ($returnType !== 'string') {
+                    try {
+                        $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                    } catch (\JsonException $exception) {
+                        throw new ApiException(
+                            sprintf(
+                                'Error JSON decoding server response (%s)',
+                                $request->getUri()
+                            ),
+                            $statusCode,
+                            $response->getHeaders(),
+                            $content
+                        );
+                    }
+                }
+            }
+
+            return [
+                ObjectSerializer::deserialize($content, $returnType, []),
+                $response->getStatusCode(),
+                $response->getHeaders()
+            ];
+
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\Anagrafica',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\ProblemDetails',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+                case 400:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\ProblemDetails',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\ProblemDetails',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation anagraficaDeleteAsync
+     *
+     * Elimina un elemento.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  int $id ID dell&#39;elemento da eliminare. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaDelete'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function anagraficaDeleteAsync($company_id, $id, string $contentType = self::contentTypes['anagraficaDelete'][0])
+    {
+        return $this->anagraficaDeleteAsyncWithHttpInfo($company_id, $id, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation anagraficaDeleteAsyncWithHttpInfo
+     *
+     * Elimina un elemento.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  int $id ID dell&#39;elemento da eliminare. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaDelete'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function anagraficaDeleteAsyncWithHttpInfo($company_id, $id, string $contentType = self::contentTypes['anagraficaDelete'][0])
+    {
+        $returnType = '\Amica\Sdk\Model\Anagrafica';
+        $request = $this->anagraficaDeleteRequest($company_id, $id, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'anagraficaDelete'
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  int $id ID dell&#39;elemento da eliminare. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaDelete'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function anagraficaDeleteRequest($company_id, $id, string $contentType = self::contentTypes['anagraficaDelete'][0])
+    {
+
+        // verify the required parameter 'company_id' is set
+        if ($company_id === null || (is_array($company_id) && count($company_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $company_id when calling anagraficaDelete'
+            );
+        }
+
+        // verify the required parameter 'id' is set
+        if ($id === null || (is_array($id) && count($id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $id when calling anagraficaDelete'
+            );
+        }
+
+
+        $resourcePath = '/api/v3/{companyId}/Anagrafica/{id}';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($company_id !== null) {
+            $resourcePath = str_replace(
+                '{' . 'companyId' . '}',
+                ObjectSerializer::toPathValue($company_id),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($id !== null) {
+            $resourcePath = str_replace(
+                '{' . 'id' . '}',
+                ObjectSerializer::toPathValue($id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', 'application/problem+json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (JWT) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+        // this endpoint requires OAuth (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+        // this endpoint requires OAuth (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'DELETE',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation anagraficaDistinct
      *
      * Restituisce una lista di elementi distinti.
      *
-     * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  string $selector Il campo usato per distinguere gli elementi. (required)
      * @param  int|null $skip Numero di elementi, a partire dal primo, da escludere dal risultato. Combinato con &#x60;Take&#x60;, è utile per la paginazione. (optional)
      * @param  int|null $take Numero di elementi da includere nel risultato. Combinato con &#x60;Skip&#x60;, è utile per la paginazione. (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaDistinctGet'] to see the possible values for this operation
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaDistinct'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\DistinctPropertyGroup[]|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdAnagraficaDistinctGet($version, $company_id, $selector, $skip = null, $take = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaDistinctGet'][0])
+    public function anagraficaDistinct($company_id, $selector, $skip = null, $take = null, string $contentType = self::contentTypes['anagraficaDistinct'][0])
     {
-        list($response) = $this->apiVversionCompanyIdAnagraficaDistinctGetWithHttpInfo($version, $company_id, $selector, $skip, $take, $contentType);
+        list($response) = $this->anagraficaDistinctWithHttpInfo($company_id, $selector, $skip, $take, $contentType);
         return $response;
     }
 
     /**
-     * Operation apiVversionCompanyIdAnagraficaDistinctGetWithHttpInfo
+     * Operation anagraficaDistinctWithHttpInfo
      *
      * Restituisce una lista di elementi distinti.
      *
-     * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  string $selector Il campo usato per distinguere gli elementi. (required)
      * @param  int|null $skip Numero di elementi, a partire dal primo, da escludere dal risultato. Combinato con &#x60;Take&#x60;, è utile per la paginazione. (optional)
      * @param  int|null $take Numero di elementi da includere nel risultato. Combinato con &#x60;Skip&#x60;, è utile per la paginazione. (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaDistinctGet'] to see the possible values for this operation
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaDistinct'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\DistinctPropertyGroup[]|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdAnagraficaDistinctGetWithHttpInfo($version, $company_id, $selector, $skip = null, $take = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaDistinctGet'][0])
+    public function anagraficaDistinctWithHttpInfo($company_id, $selector, $skip = null, $take = null, string $contentType = self::contentTypes['anagraficaDistinct'][0])
     {
-        $request = $this->apiVversionCompanyIdAnagraficaDistinctGetRequest($version, $company_id, $selector, $skip, $take, $contentType);
+        $request = $this->anagraficaDistinctRequest($company_id, $selector, $skip, $take, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -367,23 +810,22 @@ class AnagraficaApi
     }
 
     /**
-     * Operation apiVversionCompanyIdAnagraficaDistinctGetAsync
+     * Operation anagraficaDistinctAsync
      *
      * Restituisce una lista di elementi distinti.
      *
-     * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  string $selector Il campo usato per distinguere gli elementi. (required)
      * @param  int|null $skip Numero di elementi, a partire dal primo, da escludere dal risultato. Combinato con &#x60;Take&#x60;, è utile per la paginazione. (optional)
      * @param  int|null $take Numero di elementi da includere nel risultato. Combinato con &#x60;Skip&#x60;, è utile per la paginazione. (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaDistinctGet'] to see the possible values for this operation
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaDistinct'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdAnagraficaDistinctGetAsync($version, $company_id, $selector, $skip = null, $take = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaDistinctGet'][0])
+    public function anagraficaDistinctAsync($company_id, $selector, $skip = null, $take = null, string $contentType = self::contentTypes['anagraficaDistinct'][0])
     {
-        return $this->apiVversionCompanyIdAnagraficaDistinctGetAsyncWithHttpInfo($version, $company_id, $selector, $skip, $take, $contentType)
+        return $this->anagraficaDistinctAsyncWithHttpInfo($company_id, $selector, $skip, $take, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -392,24 +834,23 @@ class AnagraficaApi
     }
 
     /**
-     * Operation apiVversionCompanyIdAnagraficaDistinctGetAsyncWithHttpInfo
+     * Operation anagraficaDistinctAsyncWithHttpInfo
      *
      * Restituisce una lista di elementi distinti.
      *
-     * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  string $selector Il campo usato per distinguere gli elementi. (required)
      * @param  int|null $skip Numero di elementi, a partire dal primo, da escludere dal risultato. Combinato con &#x60;Take&#x60;, è utile per la paginazione. (optional)
      * @param  int|null $take Numero di elementi da includere nel risultato. Combinato con &#x60;Skip&#x60;, è utile per la paginazione. (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaDistinctGet'] to see the possible values for this operation
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaDistinct'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdAnagraficaDistinctGetAsyncWithHttpInfo($version, $company_id, $selector, $skip = null, $take = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaDistinctGet'][0])
+    public function anagraficaDistinctAsyncWithHttpInfo($company_id, $selector, $skip = null, $take = null, string $contentType = self::contentTypes['anagraficaDistinct'][0])
     {
         $returnType = '\Amica\Sdk\Model\DistinctPropertyGroup[]';
-        $request = $this->apiVversionCompanyIdAnagraficaDistinctGetRequest($version, $company_id, $selector, $skip, $take, $contentType);
+        $request = $this->anagraficaDistinctRequest($company_id, $selector, $skip, $take, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -448,46 +889,38 @@ class AnagraficaApi
     }
 
     /**
-     * Create request for operation 'apiVversionCompanyIdAnagraficaDistinctGet'
+     * Create request for operation 'anagraficaDistinct'
      *
-     * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  string $selector Il campo usato per distinguere gli elementi. (required)
      * @param  int|null $skip Numero di elementi, a partire dal primo, da escludere dal risultato. Combinato con &#x60;Take&#x60;, è utile per la paginazione. (optional)
      * @param  int|null $take Numero di elementi da includere nel risultato. Combinato con &#x60;Skip&#x60;, è utile per la paginazione. (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaDistinctGet'] to see the possible values for this operation
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaDistinct'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdAnagraficaDistinctGetRequest($version, $company_id, $selector, $skip = null, $take = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaDistinctGet'][0])
+    public function anagraficaDistinctRequest($company_id, $selector, $skip = null, $take = null, string $contentType = self::contentTypes['anagraficaDistinct'][0])
     {
-
-        // verify the required parameter 'version' is set
-        if ($version === null || (is_array($version) && count($version) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $version when calling apiVversionCompanyIdAnagraficaDistinctGet'
-            );
-        }
 
         // verify the required parameter 'company_id' is set
         if ($company_id === null || (is_array($company_id) && count($company_id) === 0)) {
             throw new \InvalidArgumentException(
-                'Missing the required parameter $company_id when calling apiVversionCompanyIdAnagraficaDistinctGet'
+                'Missing the required parameter $company_id when calling anagraficaDistinct'
             );
         }
 
         // verify the required parameter 'selector' is set
         if ($selector === null || (is_array($selector) && count($selector) === 0)) {
             throw new \InvalidArgumentException(
-                'Missing the required parameter $selector when calling apiVversionCompanyIdAnagraficaDistinctGet'
+                'Missing the required parameter $selector when calling anagraficaDistinct'
             );
         }
 
 
 
 
-        $resourcePath = '/api/v{version}/{companyId}/Anagrafica/distinct';
+        $resourcePath = '/api/v3/{companyId}/Anagrafica/distinct';
         $formParams = [];
         $queryParams = [];
         $headerParams = [];
@@ -523,14 +956,6 @@ class AnagraficaApi
         ) ?? []);
 
 
-        // path params
-        if ($version !== null) {
-            $resourcePath = str_replace(
-                '{' . 'version' . '}',
-                ObjectSerializer::toPathValue($version),
-                $resourcePath
-            );
-        }
         // path params
         if ($company_id !== null) {
             $resourcePath = str_replace(
@@ -607,52 +1032,510 @@ class AnagraficaApi
     }
 
     /**
-     * Operation apiVversionCompanyIdAnagraficaGet
+     * Operation anagraficaGet
+     *
+     * Restituisce un elemento.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  int $id ID dell&#39;elemento da recuperare. (required)
+     * @param  string[]|null $expand Elenco separato da virgole di oggetti da espandere. Permette di recuperare gli oggetti correlati in un&#39;unica chiamata. Ad esempio, per includere i beni e servizi associati a ciascun documento si aggiunge &#x60;expand&#x3D;Rows&#x60; alla chiamata. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaGet'] to see the possible values for this operation
+     *
+     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
+     */
+    public function anagraficaGet($company_id, $id, $expand = null, string $contentType = self::contentTypes['anagraficaGet'][0])
+    {
+        list($response) = $this->anagraficaGetWithHttpInfo($company_id, $id, $expand, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation anagraficaGetWithHttpInfo
+     *
+     * Restituisce un elemento.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  int $id ID dell&#39;elemento da recuperare. (required)
+     * @param  string[]|null $expand Elenco separato da virgole di oggetti da espandere. Permette di recuperare gli oggetti correlati in un&#39;unica chiamata. Ad esempio, per includere i beni e servizi associati a ciascun documento si aggiunge &#x60;expand&#x3D;Rows&#x60; alla chiamata. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaGet'] to see the possible values for this operation
+     *
+     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function anagraficaGetWithHttpInfo($company_id, $id, $expand = null, string $contentType = self::contentTypes['anagraficaGet'][0])
+    {
+        $request = $this->anagraficaGetRequest($company_id, $id, $expand, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    if ('\Amica\Sdk\Model\Anagrafica' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\Anagrafica' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\Anagrafica', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                case 400:
+                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                case 404:
+                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                case 403:
+                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+            }
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            $returnType = '\Amica\Sdk\Model\Anagrafica';
+            if ($returnType === '\SplFileObject') {
+                $content = $response->getBody(); //stream goes to serializer
+            } else {
+                $content = (string) $response->getBody();
+                if ($returnType !== 'string') {
+                    try {
+                        $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                    } catch (\JsonException $exception) {
+                        throw new ApiException(
+                            sprintf(
+                                'Error JSON decoding server response (%s)',
+                                $request->getUri()
+                            ),
+                            $statusCode,
+                            $response->getHeaders(),
+                            $content
+                        );
+                    }
+                }
+            }
+
+            return [
+                ObjectSerializer::deserialize($content, $returnType, []),
+                $response->getStatusCode(),
+                $response->getHeaders()
+            ];
+
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\Anagrafica',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+                case 400:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\ProblemDetails',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\ProblemDetails',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\ProblemDetails',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation anagraficaGetAsync
+     *
+     * Restituisce un elemento.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  int $id ID dell&#39;elemento da recuperare. (required)
+     * @param  string[]|null $expand Elenco separato da virgole di oggetti da espandere. Permette di recuperare gli oggetti correlati in un&#39;unica chiamata. Ad esempio, per includere i beni e servizi associati a ciascun documento si aggiunge &#x60;expand&#x3D;Rows&#x60; alla chiamata. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaGet'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function anagraficaGetAsync($company_id, $id, $expand = null, string $contentType = self::contentTypes['anagraficaGet'][0])
+    {
+        return $this->anagraficaGetAsyncWithHttpInfo($company_id, $id, $expand, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation anagraficaGetAsyncWithHttpInfo
+     *
+     * Restituisce un elemento.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  int $id ID dell&#39;elemento da recuperare. (required)
+     * @param  string[]|null $expand Elenco separato da virgole di oggetti da espandere. Permette di recuperare gli oggetti correlati in un&#39;unica chiamata. Ad esempio, per includere i beni e servizi associati a ciascun documento si aggiunge &#x60;expand&#x3D;Rows&#x60; alla chiamata. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaGet'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function anagraficaGetAsyncWithHttpInfo($company_id, $id, $expand = null, string $contentType = self::contentTypes['anagraficaGet'][0])
+    {
+        $returnType = '\Amica\Sdk\Model\Anagrafica';
+        $request = $this->anagraficaGetRequest($company_id, $id, $expand, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'anagraficaGet'
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  int $id ID dell&#39;elemento da recuperare. (required)
+     * @param  string[]|null $expand Elenco separato da virgole di oggetti da espandere. Permette di recuperare gli oggetti correlati in un&#39;unica chiamata. Ad esempio, per includere i beni e servizi associati a ciascun documento si aggiunge &#x60;expand&#x3D;Rows&#x60; alla chiamata. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaGet'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function anagraficaGetRequest($company_id, $id, $expand = null, string $contentType = self::contentTypes['anagraficaGet'][0])
+    {
+
+        // verify the required parameter 'company_id' is set
+        if ($company_id === null || (is_array($company_id) && count($company_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $company_id when calling anagraficaGet'
+            );
+        }
+
+        // verify the required parameter 'id' is set
+        if ($id === null || (is_array($id) && count($id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $id when calling anagraficaGet'
+            );
+        }
+
+
+
+        $resourcePath = '/api/v3/{companyId}/Anagrafica/{id}';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $expand,
+            'Expand', // param base name
+            'array', // openApiType
+            'form', // style
+            true, // explode
+            false // required
+        ) ?? []);
+
+
+        // path params
+        if ($company_id !== null) {
+            $resourcePath = str_replace(
+                '{' . 'companyId' . '}',
+                ObjectSerializer::toPathValue($company_id),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($id !== null) {
+            $resourcePath = str_replace(
+                '{' . 'id' . '}',
+                ObjectSerializer::toPathValue($id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', 'application/problem+json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (JWT) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+        // this endpoint requires OAuth (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+        // this endpoint requires OAuth (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation anagraficaList
      *
      * Restituisce una lista di elementi.
      *
-     * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int|null $skip skip (optional)
-     * @param  int|null $take take (optional)
-     * @param  bool|null $skip_total_count skip_total_count (optional)
-     * @param  string|null $filter filter (optional)
-     * @param  string|null $order order (optional)
-     * @param  string[]|null $expand expand (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaGet'] to see the possible values for this operation
+     * @param  int|null $skip Numero di elementi da escludere dall&#39;inizio del risultato. Combinato con &#x60;Take&#x60;, è utile per la paginazione. (optional)
+     * @param  int|null $take Numero di elementi da includere nel risultato. Combinato con &#x60;Skip&#x60;, è utile per la paginazione. (optional)
+     * @param  bool|null $skip_total_count Indica se l&#39;header &#x60;X-Read-TotalCount&#x60; debba essere escluso dalla risposta. Impostare a &#x60;true&#x60; per prestazioni migliori a scapito dell&#39;accuratezza. Il valore predefinito è &#x60;false&#x60;. (optional)
+     * @param  string|null $filter Condizioni di ricerca. Elenco di espressioni separate da virgola. Ogni espressione è composta da nome del campo, operatore di confronto, valore ed eventualmente un connettore logico. Operatori validi: &#x60;$eq&#x60; (uguale), &#x60;$ne&#x60; (diverso), &#x60;$gt&#x60; (maggiore di), &#x60;$lt&#x60; (minore di), &#x60;$lte&#x60; (minore o uguale), &#x60;$gte&#x60; (maggiore o uguale), &#x60;$ct&#x60; (contiene), &#x60;$nct&#x60; (non contiene), &#x60;$sw&#x60; (inizia con), &#x60;$ew&#x60; (finisce con). Più espressioni possono essere concatenate con un connettore logico &#x60;$and&#x60; o &#x60;$or&#x60; (&#x60;$and&#x60; può essere omesso). Le query annidate si esprimono racchiudendo le sotto-query tra parentesi quadre (&#x60;[]&#x60;). Nell&#39;esempio vengono inclusi tutti gli elementi con &#x60;field1&#x3D;\&quot;hello\&quot;&#x60; oppure &#x60;field2&gt;10&#x60;. (optional)
+     * @param  string|null $order Opzioni di ordinamento. Un segno meno (trattino) prima del nome indica ordinamento discendente. Nell&#39;esempio i risultati sono ordinati prima per &#x60;field1&#x60; (discendente), poi per &#x60;field2&#x60;. (optional)
+     * @param  string[]|null $expand Elenco separato da virgole di oggetti da espandere. Permette di recuperare gli oggetti correlati in un&#39;unica chiamata. Ad esempio, per includere i beni e servizi associati a ciascun documento si aggiunge &#x60;expand&#x3D;Rows&#x60; alla chiamata. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaList'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\Anagrafica[]|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdAnagraficaGet($version, $company_id, $skip = null, $take = null, $skip_total_count = null, $filter = null, $order = null, $expand = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaGet'][0])
+    public function anagraficaList($company_id, $skip = null, $take = null, $skip_total_count = null, $filter = null, $order = null, $expand = null, string $contentType = self::contentTypes['anagraficaList'][0])
     {
-        list($response) = $this->apiVversionCompanyIdAnagraficaGetWithHttpInfo($version, $company_id, $skip, $take, $skip_total_count, $filter, $order, $expand, $contentType);
+        list($response) = $this->anagraficaListWithHttpInfo($company_id, $skip, $take, $skip_total_count, $filter, $order, $expand, $contentType);
         return $response;
     }
 
     /**
-     * Operation apiVversionCompanyIdAnagraficaGetWithHttpInfo
+     * Operation anagraficaListWithHttpInfo
      *
      * Restituisce una lista di elementi.
      *
-     * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int|null $skip (optional)
-     * @param  int|null $take (optional)
-     * @param  bool|null $skip_total_count (optional)
-     * @param  string|null $filter (optional)
-     * @param  string|null $order (optional)
-     * @param  string[]|null $expand (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaGet'] to see the possible values for this operation
+     * @param  int|null $skip Numero di elementi da escludere dall&#39;inizio del risultato. Combinato con &#x60;Take&#x60;, è utile per la paginazione. (optional)
+     * @param  int|null $take Numero di elementi da includere nel risultato. Combinato con &#x60;Skip&#x60;, è utile per la paginazione. (optional)
+     * @param  bool|null $skip_total_count Indica se l&#39;header &#x60;X-Read-TotalCount&#x60; debba essere escluso dalla risposta. Impostare a &#x60;true&#x60; per prestazioni migliori a scapito dell&#39;accuratezza. Il valore predefinito è &#x60;false&#x60;. (optional)
+     * @param  string|null $filter Condizioni di ricerca. Elenco di espressioni separate da virgola. Ogni espressione è composta da nome del campo, operatore di confronto, valore ed eventualmente un connettore logico. Operatori validi: &#x60;$eq&#x60; (uguale), &#x60;$ne&#x60; (diverso), &#x60;$gt&#x60; (maggiore di), &#x60;$lt&#x60; (minore di), &#x60;$lte&#x60; (minore o uguale), &#x60;$gte&#x60; (maggiore o uguale), &#x60;$ct&#x60; (contiene), &#x60;$nct&#x60; (non contiene), &#x60;$sw&#x60; (inizia con), &#x60;$ew&#x60; (finisce con). Più espressioni possono essere concatenate con un connettore logico &#x60;$and&#x60; o &#x60;$or&#x60; (&#x60;$and&#x60; può essere omesso). Le query annidate si esprimono racchiudendo le sotto-query tra parentesi quadre (&#x60;[]&#x60;). Nell&#39;esempio vengono inclusi tutti gli elementi con &#x60;field1&#x3D;\&quot;hello\&quot;&#x60; oppure &#x60;field2&gt;10&#x60;. (optional)
+     * @param  string|null $order Opzioni di ordinamento. Un segno meno (trattino) prima del nome indica ordinamento discendente. Nell&#39;esempio i risultati sono ordinati prima per &#x60;field1&#x60; (discendente), poi per &#x60;field2&#x60;. (optional)
+     * @param  string[]|null $expand Elenco separato da virgole di oggetti da espandere. Permette di recuperare gli oggetti correlati in un&#39;unica chiamata. Ad esempio, per includere i beni e servizi associati a ciascun documento si aggiunge &#x60;expand&#x3D;Rows&#x60; alla chiamata. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaList'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\Anagrafica[]|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdAnagraficaGetWithHttpInfo($version, $company_id, $skip = null, $take = null, $skip_total_count = null, $filter = null, $order = null, $expand = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaGet'][0])
+    public function anagraficaListWithHttpInfo($company_id, $skip = null, $take = null, $skip_total_count = null, $filter = null, $order = null, $expand = null, string $contentType = self::contentTypes['anagraficaList'][0])
     {
-        $request = $this->apiVversionCompanyIdAnagraficaGetRequest($version, $company_id, $skip, $take, $skip_total_count, $filter, $order, $expand, $contentType);
+        $request = $this->anagraficaListRequest($company_id, $skip, $take, $skip_total_count, $filter, $order, $expand, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -834,26 +1717,25 @@ class AnagraficaApi
     }
 
     /**
-     * Operation apiVversionCompanyIdAnagraficaGetAsync
+     * Operation anagraficaListAsync
      *
      * Restituisce una lista di elementi.
      *
-     * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int|null $skip (optional)
-     * @param  int|null $take (optional)
-     * @param  bool|null $skip_total_count (optional)
-     * @param  string|null $filter (optional)
-     * @param  string|null $order (optional)
-     * @param  string[]|null $expand (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaGet'] to see the possible values for this operation
+     * @param  int|null $skip Numero di elementi da escludere dall&#39;inizio del risultato. Combinato con &#x60;Take&#x60;, è utile per la paginazione. (optional)
+     * @param  int|null $take Numero di elementi da includere nel risultato. Combinato con &#x60;Skip&#x60;, è utile per la paginazione. (optional)
+     * @param  bool|null $skip_total_count Indica se l&#39;header &#x60;X-Read-TotalCount&#x60; debba essere escluso dalla risposta. Impostare a &#x60;true&#x60; per prestazioni migliori a scapito dell&#39;accuratezza. Il valore predefinito è &#x60;false&#x60;. (optional)
+     * @param  string|null $filter Condizioni di ricerca. Elenco di espressioni separate da virgola. Ogni espressione è composta da nome del campo, operatore di confronto, valore ed eventualmente un connettore logico. Operatori validi: &#x60;$eq&#x60; (uguale), &#x60;$ne&#x60; (diverso), &#x60;$gt&#x60; (maggiore di), &#x60;$lt&#x60; (minore di), &#x60;$lte&#x60; (minore o uguale), &#x60;$gte&#x60; (maggiore o uguale), &#x60;$ct&#x60; (contiene), &#x60;$nct&#x60; (non contiene), &#x60;$sw&#x60; (inizia con), &#x60;$ew&#x60; (finisce con). Più espressioni possono essere concatenate con un connettore logico &#x60;$and&#x60; o &#x60;$or&#x60; (&#x60;$and&#x60; può essere omesso). Le query annidate si esprimono racchiudendo le sotto-query tra parentesi quadre (&#x60;[]&#x60;). Nell&#39;esempio vengono inclusi tutti gli elementi con &#x60;field1&#x3D;\&quot;hello\&quot;&#x60; oppure &#x60;field2&gt;10&#x60;. (optional)
+     * @param  string|null $order Opzioni di ordinamento. Un segno meno (trattino) prima del nome indica ordinamento discendente. Nell&#39;esempio i risultati sono ordinati prima per &#x60;field1&#x60; (discendente), poi per &#x60;field2&#x60;. (optional)
+     * @param  string[]|null $expand Elenco separato da virgole di oggetti da espandere. Permette di recuperare gli oggetti correlati in un&#39;unica chiamata. Ad esempio, per includere i beni e servizi associati a ciascun documento si aggiunge &#x60;expand&#x3D;Rows&#x60; alla chiamata. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaList'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdAnagraficaGetAsync($version, $company_id, $skip = null, $take = null, $skip_total_count = null, $filter = null, $order = null, $expand = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaGet'][0])
+    public function anagraficaListAsync($company_id, $skip = null, $take = null, $skip_total_count = null, $filter = null, $order = null, $expand = null, string $contentType = self::contentTypes['anagraficaList'][0])
     {
-        return $this->apiVversionCompanyIdAnagraficaGetAsyncWithHttpInfo($version, $company_id, $skip, $take, $skip_total_count, $filter, $order, $expand, $contentType)
+        return $this->anagraficaListAsyncWithHttpInfo($company_id, $skip, $take, $skip_total_count, $filter, $order, $expand, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -862,27 +1744,26 @@ class AnagraficaApi
     }
 
     /**
-     * Operation apiVversionCompanyIdAnagraficaGetAsyncWithHttpInfo
+     * Operation anagraficaListAsyncWithHttpInfo
      *
      * Restituisce una lista di elementi.
      *
-     * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int|null $skip (optional)
-     * @param  int|null $take (optional)
-     * @param  bool|null $skip_total_count (optional)
-     * @param  string|null $filter (optional)
-     * @param  string|null $order (optional)
-     * @param  string[]|null $expand (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaGet'] to see the possible values for this operation
+     * @param  int|null $skip Numero di elementi da escludere dall&#39;inizio del risultato. Combinato con &#x60;Take&#x60;, è utile per la paginazione. (optional)
+     * @param  int|null $take Numero di elementi da includere nel risultato. Combinato con &#x60;Skip&#x60;, è utile per la paginazione. (optional)
+     * @param  bool|null $skip_total_count Indica se l&#39;header &#x60;X-Read-TotalCount&#x60; debba essere escluso dalla risposta. Impostare a &#x60;true&#x60; per prestazioni migliori a scapito dell&#39;accuratezza. Il valore predefinito è &#x60;false&#x60;. (optional)
+     * @param  string|null $filter Condizioni di ricerca. Elenco di espressioni separate da virgola. Ogni espressione è composta da nome del campo, operatore di confronto, valore ed eventualmente un connettore logico. Operatori validi: &#x60;$eq&#x60; (uguale), &#x60;$ne&#x60; (diverso), &#x60;$gt&#x60; (maggiore di), &#x60;$lt&#x60; (minore di), &#x60;$lte&#x60; (minore o uguale), &#x60;$gte&#x60; (maggiore o uguale), &#x60;$ct&#x60; (contiene), &#x60;$nct&#x60; (non contiene), &#x60;$sw&#x60; (inizia con), &#x60;$ew&#x60; (finisce con). Più espressioni possono essere concatenate con un connettore logico &#x60;$and&#x60; o &#x60;$or&#x60; (&#x60;$and&#x60; può essere omesso). Le query annidate si esprimono racchiudendo le sotto-query tra parentesi quadre (&#x60;[]&#x60;). Nell&#39;esempio vengono inclusi tutti gli elementi con &#x60;field1&#x3D;\&quot;hello\&quot;&#x60; oppure &#x60;field2&gt;10&#x60;. (optional)
+     * @param  string|null $order Opzioni di ordinamento. Un segno meno (trattino) prima del nome indica ordinamento discendente. Nell&#39;esempio i risultati sono ordinati prima per &#x60;field1&#x60; (discendente), poi per &#x60;field2&#x60;. (optional)
+     * @param  string[]|null $expand Elenco separato da virgole di oggetti da espandere. Permette di recuperare gli oggetti correlati in un&#39;unica chiamata. Ad esempio, per includere i beni e servizi associati a ciascun documento si aggiunge &#x60;expand&#x3D;Rows&#x60; alla chiamata. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaList'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdAnagraficaGetAsyncWithHttpInfo($version, $company_id, $skip = null, $take = null, $skip_total_count = null, $filter = null, $order = null, $expand = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaGet'][0])
+    public function anagraficaListAsyncWithHttpInfo($company_id, $skip = null, $take = null, $skip_total_count = null, $filter = null, $order = null, $expand = null, string $contentType = self::contentTypes['anagraficaList'][0])
     {
         $returnType = '\Amica\Sdk\Model\Anagrafica[]';
-        $request = $this->apiVversionCompanyIdAnagraficaGetRequest($version, $company_id, $skip, $take, $skip_total_count, $filter, $order, $expand, $contentType);
+        $request = $this->anagraficaListRequest($company_id, $skip, $take, $skip_total_count, $filter, $order, $expand, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -921,35 +1802,27 @@ class AnagraficaApi
     }
 
     /**
-     * Create request for operation 'apiVversionCompanyIdAnagraficaGet'
+     * Create request for operation 'anagraficaList'
      *
-     * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int|null $skip (optional)
-     * @param  int|null $take (optional)
-     * @param  bool|null $skip_total_count (optional)
-     * @param  string|null $filter (optional)
-     * @param  string|null $order (optional)
-     * @param  string[]|null $expand (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaGet'] to see the possible values for this operation
+     * @param  int|null $skip Numero di elementi da escludere dall&#39;inizio del risultato. Combinato con &#x60;Take&#x60;, è utile per la paginazione. (optional)
+     * @param  int|null $take Numero di elementi da includere nel risultato. Combinato con &#x60;Skip&#x60;, è utile per la paginazione. (optional)
+     * @param  bool|null $skip_total_count Indica se l&#39;header &#x60;X-Read-TotalCount&#x60; debba essere escluso dalla risposta. Impostare a &#x60;true&#x60; per prestazioni migliori a scapito dell&#39;accuratezza. Il valore predefinito è &#x60;false&#x60;. (optional)
+     * @param  string|null $filter Condizioni di ricerca. Elenco di espressioni separate da virgola. Ogni espressione è composta da nome del campo, operatore di confronto, valore ed eventualmente un connettore logico. Operatori validi: &#x60;$eq&#x60; (uguale), &#x60;$ne&#x60; (diverso), &#x60;$gt&#x60; (maggiore di), &#x60;$lt&#x60; (minore di), &#x60;$lte&#x60; (minore o uguale), &#x60;$gte&#x60; (maggiore o uguale), &#x60;$ct&#x60; (contiene), &#x60;$nct&#x60; (non contiene), &#x60;$sw&#x60; (inizia con), &#x60;$ew&#x60; (finisce con). Più espressioni possono essere concatenate con un connettore logico &#x60;$and&#x60; o &#x60;$or&#x60; (&#x60;$and&#x60; può essere omesso). Le query annidate si esprimono racchiudendo le sotto-query tra parentesi quadre (&#x60;[]&#x60;). Nell&#39;esempio vengono inclusi tutti gli elementi con &#x60;field1&#x3D;\&quot;hello\&quot;&#x60; oppure &#x60;field2&gt;10&#x60;. (optional)
+     * @param  string|null $order Opzioni di ordinamento. Un segno meno (trattino) prima del nome indica ordinamento discendente. Nell&#39;esempio i risultati sono ordinati prima per &#x60;field1&#x60; (discendente), poi per &#x60;field2&#x60;. (optional)
+     * @param  string[]|null $expand Elenco separato da virgole di oggetti da espandere. Permette di recuperare gli oggetti correlati in un&#39;unica chiamata. Ad esempio, per includere i beni e servizi associati a ciascun documento si aggiunge &#x60;expand&#x3D;Rows&#x60; alla chiamata. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaList'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdAnagraficaGetRequest($version, $company_id, $skip = null, $take = null, $skip_total_count = null, $filter = null, $order = null, $expand = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaGet'][0])
+    public function anagraficaListRequest($company_id, $skip = null, $take = null, $skip_total_count = null, $filter = null, $order = null, $expand = null, string $contentType = self::contentTypes['anagraficaList'][0])
     {
-
-        // verify the required parameter 'version' is set
-        if ($version === null || (is_array($version) && count($version) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $version when calling apiVversionCompanyIdAnagraficaGet'
-            );
-        }
 
         // verify the required parameter 'company_id' is set
         if ($company_id === null || (is_array($company_id) && count($company_id) === 0)) {
             throw new \InvalidArgumentException(
-                'Missing the required parameter $company_id when calling apiVversionCompanyIdAnagraficaGet'
+                'Missing the required parameter $company_id when calling anagraficaList'
             );
         }
 
@@ -960,7 +1833,7 @@ class AnagraficaApi
 
 
 
-        $resourcePath = '/api/v{version}/{companyId}/Anagrafica';
+        $resourcePath = '/api/v3/{companyId}/Anagrafica';
         $formParams = [];
         $queryParams = [];
         $headerParams = [];
@@ -1024,13 +1897,395 @@ class AnagraficaApi
 
 
         // path params
-        if ($version !== null) {
+        if ($company_id !== null) {
             $resourcePath = str_replace(
-                '{' . 'version' . '}',
-                ObjectSerializer::toPathValue($version),
+                '{' . 'companyId' . '}',
+                ObjectSerializer::toPathValue($company_id),
                 $resourcePath
             );
         }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', 'application/problem+json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (JWT) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+        // this endpoint requires OAuth (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+        // this endpoint requires OAuth (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation anagraficaNewInstance
+     *
+     * Restituisce una nuova istanza di un contatto del tipo specificato.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaNewInstance'] to see the possible values for this operation
+     *
+     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
+     */
+    public function anagraficaNewInstance($company_id, string $contentType = self::contentTypes['anagraficaNewInstance'][0])
+    {
+        list($response) = $this->anagraficaNewInstanceWithHttpInfo($company_id, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation anagraficaNewInstanceWithHttpInfo
+     *
+     * Restituisce una nuova istanza di un contatto del tipo specificato.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaNewInstance'] to see the possible values for this operation
+     *
+     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function anagraficaNewInstanceWithHttpInfo($company_id, string $contentType = self::contentTypes['anagraficaNewInstance'][0])
+    {
+        $request = $this->anagraficaNewInstanceRequest($company_id, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    if ('\Amica\Sdk\Model\Anagrafica' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\Anagrafica' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\Anagrafica', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                case 400:
+                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                case 403:
+                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+            }
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            $returnType = '\Amica\Sdk\Model\Anagrafica';
+            if ($returnType === '\SplFileObject') {
+                $content = $response->getBody(); //stream goes to serializer
+            } else {
+                $content = (string) $response->getBody();
+                if ($returnType !== 'string') {
+                    try {
+                        $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                    } catch (\JsonException $exception) {
+                        throw new ApiException(
+                            sprintf(
+                                'Error JSON decoding server response (%s)',
+                                $request->getUri()
+                            ),
+                            $statusCode,
+                            $response->getHeaders(),
+                            $content
+                        );
+                    }
+                }
+            }
+
+            return [
+                ObjectSerializer::deserialize($content, $returnType, []),
+                $response->getStatusCode(),
+                $response->getHeaders()
+            ];
+
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\Anagrafica',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+                case 400:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\ProblemDetails',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\ProblemDetails',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation anagraficaNewInstanceAsync
+     *
+     * Restituisce una nuova istanza di un contatto del tipo specificato.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaNewInstance'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function anagraficaNewInstanceAsync($company_id, string $contentType = self::contentTypes['anagraficaNewInstance'][0])
+    {
+        return $this->anagraficaNewInstanceAsyncWithHttpInfo($company_id, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation anagraficaNewInstanceAsyncWithHttpInfo
+     *
+     * Restituisce una nuova istanza di un contatto del tipo specificato.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaNewInstance'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function anagraficaNewInstanceAsyncWithHttpInfo($company_id, string $contentType = self::contentTypes['anagraficaNewInstance'][0])
+    {
+        $returnType = '\Amica\Sdk\Model\Anagrafica';
+        $request = $this->anagraficaNewInstanceRequest($company_id, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'anagraficaNewInstance'
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaNewInstance'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function anagraficaNewInstanceRequest($company_id, string $contentType = self::contentTypes['anagraficaNewInstance'][0])
+    {
+
+        // verify the required parameter 'company_id' is set
+        if ($company_id === null || (is_array($company_id) && count($company_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $company_id when calling anagraficaNewInstance'
+            );
+        }
+
+
+        $resourcePath = '/api/v3/{companyId}/Anagrafica/new';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
         // path params
         if ($company_id !== null) {
             $resourcePath = str_replace(
@@ -1107,42 +2362,44 @@ class AnagraficaApi
     }
 
     /**
-     * Operation apiVversionCompanyIdAnagraficaIdDelete
+     * Operation anagraficaPost
      *
-     * Elimina un elemento.
+     * Salva un nuovo elemento.
      *
-     * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int $id ID dell&#39;elemento da eliminare. (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaIdDelete'] to see the possible values for this operation
+     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
+     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaPost'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function apiVversionCompanyIdAnagraficaIdDelete($version, $company_id, $id, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaIdDelete'][0])
+    public function anagraficaPost($company_id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['anagraficaPost'][0])
     {
-        list($response) = $this->apiVversionCompanyIdAnagraficaIdDeleteWithHttpInfo($version, $company_id, $id, $contentType);
+        list($response) = $this->anagraficaPostWithHttpInfo($company_id, $validation_override, $idempotency_key, $anagrafica, $contentType);
         return $response;
     }
 
     /**
-     * Operation apiVversionCompanyIdAnagraficaIdDeleteWithHttpInfo
+     * Operation anagraficaPostWithHttpInfo
      *
-     * Elimina un elemento.
+     * Salva un nuovo elemento.
      *
-     * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int $id ID dell&#39;elemento da eliminare. (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaIdDelete'] to see the possible values for this operation
+     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
+     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaPost'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function apiVversionCompanyIdAnagraficaIdDeleteWithHttpInfo($version, $company_id, $id, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaIdDelete'][0])
+    public function anagraficaPostWithHttpInfo($company_id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['anagraficaPost'][0])
     {
-        $request = $this->apiVversionCompanyIdAnagraficaIdDeleteRequest($version, $company_id, $id, $contentType);
+        $request = $this->anagraficaPostRequest($company_id, $validation_override, $idempotency_key, $anagrafica, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -1168,7 +2425,7 @@ class AnagraficaApi
 
 
             switch($statusCode) {
-                case 200:
+                case 201:
                     if ('\Amica\Sdk\Model\Anagrafica' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
@@ -1195,7 +2452,7 @@ class AnagraficaApi
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
-                case 404:
+                case 409:
                     if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
@@ -1321,7 +2578,7 @@ class AnagraficaApi
 
         } catch (ApiException $e) {
             switch ($e->getCode()) {
-                case 200:
+                case 201:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
                         '\Amica\Sdk\Model\Anagrafica',
@@ -1329,7 +2586,7 @@ class AnagraficaApi
                     );
                     $e->setResponseObject($data);
                     break;
-                case 404:
+                case 409:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
                         '\Amica\Sdk\Model\ProblemDetails',
@@ -1359,21 +2616,22 @@ class AnagraficaApi
     }
 
     /**
-     * Operation apiVversionCompanyIdAnagraficaIdDeleteAsync
+     * Operation anagraficaPostAsync
      *
-     * Elimina un elemento.
+     * Salva un nuovo elemento.
      *
-     * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int $id ID dell&#39;elemento da eliminare. (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaIdDelete'] to see the possible values for this operation
+     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
+     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdAnagraficaIdDeleteAsync($version, $company_id, $id, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaIdDelete'][0])
+    public function anagraficaPostAsync($company_id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['anagraficaPost'][0])
     {
-        return $this->apiVversionCompanyIdAnagraficaIdDeleteAsyncWithHttpInfo($version, $company_id, $id, $contentType)
+        return $this->anagraficaPostAsyncWithHttpInfo($company_id, $validation_override, $idempotency_key, $anagrafica, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -1382,22 +2640,23 @@ class AnagraficaApi
     }
 
     /**
-     * Operation apiVversionCompanyIdAnagraficaIdDeleteAsyncWithHttpInfo
+     * Operation anagraficaPostAsyncWithHttpInfo
      *
-     * Elimina un elemento.
+     * Salva un nuovo elemento.
      *
-     * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int $id ID dell&#39;elemento da eliminare. (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaIdDelete'] to see the possible values for this operation
+     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
+     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function apiVversionCompanyIdAnagraficaIdDeleteAsyncWithHttpInfo($version, $company_id, $id, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaIdDelete'][0])
+    public function anagraficaPostAsyncWithHttpInfo($company_id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['anagraficaPost'][0])
     {
         $returnType = '\Amica\Sdk\Model\Anagrafica';
-        $request = $this->apiVversionCompanyIdAnagraficaIdDeleteRequest($version, $company_id, $id, $contentType);
+        $request = $this->anagraficaPostRequest($company_id, $validation_override, $idempotency_key, $anagrafica, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -1436,1032 +2695,24 @@ class AnagraficaApi
     }
 
     /**
-     * Create request for operation 'apiVversionCompanyIdAnagraficaIdDelete'
+     * Create request for operation 'anagraficaPost'
      *
-     * @param  string $version Versione API. (required)
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int $id ID dell&#39;elemento da eliminare. (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaIdDelete'] to see the possible values for this operation
+     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
+     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaPost'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function apiVversionCompanyIdAnagraficaIdDeleteRequest($version, $company_id, $id, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaIdDelete'][0])
+    public function anagraficaPostRequest($company_id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['anagraficaPost'][0])
     {
-
-        // verify the required parameter 'version' is set
-        if ($version === null || (is_array($version) && count($version) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $version when calling apiVversionCompanyIdAnagraficaIdDelete'
-            );
-        }
 
         // verify the required parameter 'company_id' is set
         if ($company_id === null || (is_array($company_id) && count($company_id) === 0)) {
             throw new \InvalidArgumentException(
-                'Missing the required parameter $company_id when calling apiVversionCompanyIdAnagraficaIdDelete'
-            );
-        }
-
-        // verify the required parameter 'id' is set
-        if ($id === null || (is_array($id) && count($id) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $id when calling apiVversionCompanyIdAnagraficaIdDelete'
-            );
-        }
-
-
-        $resourcePath = '/api/v{version}/{companyId}/Anagrafica/{id}';
-        $formParams = [];
-        $queryParams = [];
-        $headerParams = [];
-        $httpBody = '';
-        $multipart = false;
-
-
-
-        // path params
-        if ($version !== null) {
-            $resourcePath = str_replace(
-                '{' . 'version' . '}',
-                ObjectSerializer::toPathValue($version),
-                $resourcePath
-            );
-        }
-        // path params
-        if ($company_id !== null) {
-            $resourcePath = str_replace(
-                '{' . 'companyId' . '}',
-                ObjectSerializer::toPathValue($company_id),
-                $resourcePath
-            );
-        }
-        // path params
-        if ($id !== null) {
-            $resourcePath = str_replace(
-                '{' . 'id' . '}',
-                ObjectSerializer::toPathValue($id),
-                $resourcePath
-            );
-        }
-
-
-        $headers = $this->headerSelector->selectHeaders(
-            ['application/json', 'application/problem+json', ],
-            $contentType,
-            $multipart
-        );
-
-        // for model (json/xml)
-        if (count($formParams) > 0) {
-            if ($multipart) {
-                $multipartContents = [];
-                foreach ($formParams as $formParamName => $formParamValue) {
-                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
-                    foreach ($formParamValueItems as $formParamValueItem) {
-                        $multipartContents[] = [
-                            'name' => $formParamName,
-                            'contents' => $formParamValueItem
-                        ];
-                    }
-                }
-                // for HTTP post (form)
-                $httpBody = new MultipartStream($multipartContents);
-
-            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
-                # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
-            } else {
-                // for HTTP post (form)
-                $httpBody = ObjectSerializer::buildQuery($formParams);
-            }
-        }
-
-        // this endpoint requires Bearer (JWT) authentication (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-        // this endpoint requires OAuth (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-        // this endpoint requires OAuth (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-
-        $defaultHeaders = [];
-        if ($this->config->getUserAgent()) {
-            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
-        }
-
-        $headers = array_merge(
-            $defaultHeaders,
-            $headerParams,
-            $headers
-        );
-
-        $operationHost = $this->config->getHost();
-        $query = ObjectSerializer::buildQuery($queryParams);
-        return new Request(
-            'DELETE',
-            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
-            $headers,
-            $httpBody
-        );
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaIdGet
-     *
-     * Restituisce un elemento.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int $id ID dell&#39;elemento da recuperare. (required)
-     * @param  string[]|null $expand expand (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaIdGet'] to see the possible values for this operation
-     *
-     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
-     */
-    public function apiVversionCompanyIdAnagraficaIdGet($version, $company_id, $id, $expand = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaIdGet'][0])
-    {
-        list($response) = $this->apiVversionCompanyIdAnagraficaIdGetWithHttpInfo($version, $company_id, $id, $expand, $contentType);
-        return $response;
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaIdGetWithHttpInfo
-     *
-     * Restituisce un elemento.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int $id ID dell&#39;elemento da recuperare. (required)
-     * @param  string[]|null $expand (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaIdGet'] to see the possible values for this operation
-     *
-     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return array of \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
-     */
-    public function apiVversionCompanyIdAnagraficaIdGetWithHttpInfo($version, $company_id, $id, $expand = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaIdGet'][0])
-    {
-        $request = $this->apiVversionCompanyIdAnagraficaIdGetRequest($version, $company_id, $id, $expand, $contentType);
-
-        try {
-            $options = $this->createHttpClientOption();
-            try {
-                $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
-                );
-            } catch (ConnectException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    null,
-                    null
-                );
-            }
-
-            $statusCode = $response->getStatusCode();
-
-
-            switch($statusCode) {
-                case 200:
-                    if ('\Amica\Sdk\Model\Anagrafica' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\Anagrafica' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\Anagrafica', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                case 400:
-                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                case 404:
-                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                case 403:
-                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-            }
-
-            if ($statusCode < 200 || $statusCode > 299) {
-                throw new ApiException(
-                    sprintf(
-                        '[%d] Error connecting to the API (%s)',
-                        $statusCode,
-                        (string) $request->getUri()
-                    ),
-                    $statusCode,
-                    $response->getHeaders(),
-                    (string) $response->getBody()
-                );
-            }
-
-            $returnType = '\Amica\Sdk\Model\Anagrafica';
-            if ($returnType === '\SplFileObject') {
-                $content = $response->getBody(); //stream goes to serializer
-            } else {
-                $content = (string) $response->getBody();
-                if ($returnType !== 'string') {
-                    try {
-                        $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                    } catch (\JsonException $exception) {
-                        throw new ApiException(
-                            sprintf(
-                                'Error JSON decoding server response (%s)',
-                                $request->getUri()
-                            ),
-                            $statusCode,
-                            $response->getHeaders(),
-                            $content
-                        );
-                    }
-                }
-            }
-
-            return [
-                ObjectSerializer::deserialize($content, $returnType, []),
-                $response->getStatusCode(),
-                $response->getHeaders()
-            ];
-
-        } catch (ApiException $e) {
-            switch ($e->getCode()) {
-                case 200:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\Anagrafica',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-                case 400:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\ProblemDetails',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-                case 404:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\ProblemDetails',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-                case 403:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\ProblemDetails',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-            }
-            throw $e;
-        }
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaIdGetAsync
-     *
-     * Restituisce un elemento.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int $id ID dell&#39;elemento da recuperare. (required)
-     * @param  string[]|null $expand (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaIdGet'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function apiVversionCompanyIdAnagraficaIdGetAsync($version, $company_id, $id, $expand = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaIdGet'][0])
-    {
-        return $this->apiVversionCompanyIdAnagraficaIdGetAsyncWithHttpInfo($version, $company_id, $id, $expand, $contentType)
-            ->then(
-                function ($response) {
-                    return $response[0];
-                }
-            );
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaIdGetAsyncWithHttpInfo
-     *
-     * Restituisce un elemento.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int $id ID dell&#39;elemento da recuperare. (required)
-     * @param  string[]|null $expand (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaIdGet'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function apiVversionCompanyIdAnagraficaIdGetAsyncWithHttpInfo($version, $company_id, $id, $expand = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaIdGet'][0])
-    {
-        $returnType = '\Amica\Sdk\Model\Anagrafica';
-        $request = $this->apiVversionCompanyIdAnagraficaIdGetRequest($version, $company_id, $id, $expand, $contentType);
-
-        return $this->client
-            ->sendAsync($request, $this->createHttpClientOption())
-            ->then(
-                function ($response) use ($returnType) {
-                    if ($returnType === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ($returnType !== 'string') {
-                            $content = json_decode($content);
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, $returnType, []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                },
-                function ($exception) {
-                    $response = $exception->getResponse();
-                    $statusCode = $response->getStatusCode();
-                    throw new ApiException(
-                        sprintf(
-                            '[%d] Error connecting to the API (%s)',
-                            $statusCode,
-                            $exception->getRequest()->getUri()
-                        ),
-                        $statusCode,
-                        $response->getHeaders(),
-                        (string) $response->getBody()
-                    );
-                }
-            );
-    }
-
-    /**
-     * Create request for operation 'apiVversionCompanyIdAnagraficaIdGet'
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int $id ID dell&#39;elemento da recuperare. (required)
-     * @param  string[]|null $expand (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaIdGet'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Psr7\Request
-     */
-    public function apiVversionCompanyIdAnagraficaIdGetRequest($version, $company_id, $id, $expand = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaIdGet'][0])
-    {
-
-        // verify the required parameter 'version' is set
-        if ($version === null || (is_array($version) && count($version) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $version when calling apiVversionCompanyIdAnagraficaIdGet'
-            );
-        }
-
-        // verify the required parameter 'company_id' is set
-        if ($company_id === null || (is_array($company_id) && count($company_id) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $company_id when calling apiVversionCompanyIdAnagraficaIdGet'
-            );
-        }
-
-        // verify the required parameter 'id' is set
-        if ($id === null || (is_array($id) && count($id) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $id when calling apiVversionCompanyIdAnagraficaIdGet'
-            );
-        }
-
-
-
-        $resourcePath = '/api/v{version}/{companyId}/Anagrafica/{id}';
-        $formParams = [];
-        $queryParams = [];
-        $headerParams = [];
-        $httpBody = '';
-        $multipart = false;
-
-        // query params
-        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
-            $expand,
-            'Expand', // param base name
-            'array', // openApiType
-            'form', // style
-            true, // explode
-            false // required
-        ) ?? []);
-
-
-        // path params
-        if ($version !== null) {
-            $resourcePath = str_replace(
-                '{' . 'version' . '}',
-                ObjectSerializer::toPathValue($version),
-                $resourcePath
-            );
-        }
-        // path params
-        if ($company_id !== null) {
-            $resourcePath = str_replace(
-                '{' . 'companyId' . '}',
-                ObjectSerializer::toPathValue($company_id),
-                $resourcePath
-            );
-        }
-        // path params
-        if ($id !== null) {
-            $resourcePath = str_replace(
-                '{' . 'id' . '}',
-                ObjectSerializer::toPathValue($id),
-                $resourcePath
-            );
-        }
-
-
-        $headers = $this->headerSelector->selectHeaders(
-            ['application/json', 'application/problem+json', ],
-            $contentType,
-            $multipart
-        );
-
-        // for model (json/xml)
-        if (count($formParams) > 0) {
-            if ($multipart) {
-                $multipartContents = [];
-                foreach ($formParams as $formParamName => $formParamValue) {
-                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
-                    foreach ($formParamValueItems as $formParamValueItem) {
-                        $multipartContents[] = [
-                            'name' => $formParamName,
-                            'contents' => $formParamValueItem
-                        ];
-                    }
-                }
-                // for HTTP post (form)
-                $httpBody = new MultipartStream($multipartContents);
-
-            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
-                # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
-            } else {
-                // for HTTP post (form)
-                $httpBody = ObjectSerializer::buildQuery($formParams);
-            }
-        }
-
-        // this endpoint requires Bearer (JWT) authentication (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-        // this endpoint requires OAuth (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-        // this endpoint requires OAuth (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-
-        $defaultHeaders = [];
-        if ($this->config->getUserAgent()) {
-            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
-        }
-
-        $headers = array_merge(
-            $defaultHeaders,
-            $headerParams,
-            $headers
-        );
-
-        $operationHost = $this->config->getHost();
-        $query = ObjectSerializer::buildQuery($queryParams);
-        return new Request(
-            'GET',
-            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
-            $headers,
-            $httpBody
-        );
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaIdPut
-     *
-     * Aggiorna un elemento esistente.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
-     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
-     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
-     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaIdPut'] to see the possible values for this operation
-     *
-     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
-     */
-    public function apiVversionCompanyIdAnagraficaIdPut($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaIdPut'][0])
-    {
-        list($response) = $this->apiVversionCompanyIdAnagraficaIdPutWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $anagrafica, $contentType);
-        return $response;
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaIdPutWithHttpInfo
-     *
-     * Aggiorna un elemento esistente.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
-     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
-     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
-     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaIdPut'] to see the possible values for this operation
-     *
-     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return array of \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
-     */
-    public function apiVversionCompanyIdAnagraficaIdPutWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaIdPut'][0])
-    {
-        $request = $this->apiVversionCompanyIdAnagraficaIdPutRequest($version, $company_id, $id, $validation_override, $idempotency_key, $anagrafica, $contentType);
-
-        try {
-            $options = $this->createHttpClientOption();
-            try {
-                $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
-                );
-            } catch (ConnectException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    null,
-                    null
-                );
-            }
-
-            $statusCode = $response->getStatusCode();
-
-
-            switch($statusCode) {
-                case 200:
-                    if ('\Amica\Sdk\Model\Anagrafica' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\Anagrafica' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\Anagrafica', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                case 422:
-                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                case 404:
-                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                case 400:
-                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                case 403:
-                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-            }
-
-            if ($statusCode < 200 || $statusCode > 299) {
-                throw new ApiException(
-                    sprintf(
-                        '[%d] Error connecting to the API (%s)',
-                        $statusCode,
-                        (string) $request->getUri()
-                    ),
-                    $statusCode,
-                    $response->getHeaders(),
-                    (string) $response->getBody()
-                );
-            }
-
-            $returnType = '\Amica\Sdk\Model\Anagrafica';
-            if ($returnType === '\SplFileObject') {
-                $content = $response->getBody(); //stream goes to serializer
-            } else {
-                $content = (string) $response->getBody();
-                if ($returnType !== 'string') {
-                    try {
-                        $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                    } catch (\JsonException $exception) {
-                        throw new ApiException(
-                            sprintf(
-                                'Error JSON decoding server response (%s)',
-                                $request->getUri()
-                            ),
-                            $statusCode,
-                            $response->getHeaders(),
-                            $content
-                        );
-                    }
-                }
-            }
-
-            return [
-                ObjectSerializer::deserialize($content, $returnType, []),
-                $response->getStatusCode(),
-                $response->getHeaders()
-            ];
-
-        } catch (ApiException $e) {
-            switch ($e->getCode()) {
-                case 200:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\Anagrafica',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-                case 422:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\ProblemDetails',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-                case 404:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\ProblemDetails',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-                case 400:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\ProblemDetails',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-                case 403:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\ProblemDetails',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-            }
-            throw $e;
-        }
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaIdPutAsync
-     *
-     * Aggiorna un elemento esistente.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
-     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
-     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
-     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaIdPut'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function apiVversionCompanyIdAnagraficaIdPutAsync($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaIdPut'][0])
-    {
-        return $this->apiVversionCompanyIdAnagraficaIdPutAsyncWithHttpInfo($version, $company_id, $id, $validation_override, $idempotency_key, $anagrafica, $contentType)
-            ->then(
-                function ($response) {
-                    return $response[0];
-                }
-            );
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaIdPutAsyncWithHttpInfo
-     *
-     * Aggiorna un elemento esistente.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
-     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
-     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
-     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaIdPut'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function apiVversionCompanyIdAnagraficaIdPutAsyncWithHttpInfo($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaIdPut'][0])
-    {
-        $returnType = '\Amica\Sdk\Model\Anagrafica';
-        $request = $this->apiVversionCompanyIdAnagraficaIdPutRequest($version, $company_id, $id, $validation_override, $idempotency_key, $anagrafica, $contentType);
-
-        return $this->client
-            ->sendAsync($request, $this->createHttpClientOption())
-            ->then(
-                function ($response) use ($returnType) {
-                    if ($returnType === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ($returnType !== 'string') {
-                            $content = json_decode($content);
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, $returnType, []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                },
-                function ($exception) {
-                    $response = $exception->getResponse();
-                    $statusCode = $response->getStatusCode();
-                    throw new ApiException(
-                        sprintf(
-                            '[%d] Error connecting to the API (%s)',
-                            $statusCode,
-                            $exception->getRequest()->getUri()
-                        ),
-                        $statusCode,
-                        $response->getHeaders(),
-                        (string) $response->getBody()
-                    );
-                }
-            );
-    }
-
-    /**
-     * Create request for operation 'apiVversionCompanyIdAnagraficaIdPut'
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
-     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
-     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
-     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaIdPut'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Psr7\Request
-     */
-    public function apiVversionCompanyIdAnagraficaIdPutRequest($version, $company_id, $id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaIdPut'][0])
-    {
-
-        // verify the required parameter 'version' is set
-        if ($version === null || (is_array($version) && count($version) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $version when calling apiVversionCompanyIdAnagraficaIdPut'
-            );
-        }
-
-        // verify the required parameter 'company_id' is set
-        if ($company_id === null || (is_array($company_id) && count($company_id) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $company_id when calling apiVversionCompanyIdAnagraficaIdPut'
-            );
-        }
-
-        // verify the required parameter 'id' is set
-        if ($id === null || (is_array($id) && count($id) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $id when calling apiVversionCompanyIdAnagraficaIdPut'
+                'Missing the required parameter $company_id when calling anagraficaPost'
             );
         }
 
@@ -2469,7 +2720,7 @@ class AnagraficaApi
 
 
 
-        $resourcePath = '/api/v{version}/{companyId}/Anagrafica/{id}';
+        $resourcePath = '/api/v3/{companyId}/Anagrafica';
         $formParams = [];
         $queryParams = [];
         $headerParams = [];
@@ -2492,13 +2743,515 @@ class AnagraficaApi
         }
 
         // path params
-        if ($version !== null) {
+        if ($company_id !== null) {
             $resourcePath = str_replace(
-                '{' . 'version' . '}',
-                ObjectSerializer::toPathValue($version),
+                '{' . 'companyId' . '}',
+                ObjectSerializer::toPathValue($company_id),
                 $resourcePath
             );
         }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', 'application/problem+json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (isset($anagrafica)) {
+            if (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the body
+                $httpBody = \GuzzleHttp\Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($anagrafica));
+            } else {
+                $httpBody = $anagrafica;
+            }
+        } elseif (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (JWT) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+        // this endpoint requires OAuth (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+        // this endpoint requires OAuth (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation anagraficaPut
+     *
+     * Aggiorna un elemento esistente.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
+     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
+     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaPut'] to see the possible values for this operation
+     *
+     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
+     */
+    public function anagraficaPut($company_id, $id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['anagraficaPut'][0])
+    {
+        list($response) = $this->anagraficaPutWithHttpInfo($company_id, $id, $validation_override, $idempotency_key, $anagrafica, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation anagraficaPutWithHttpInfo
+     *
+     * Aggiorna un elemento esistente.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
+     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
+     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaPut'] to see the possible values for this operation
+     *
+     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function anagraficaPutWithHttpInfo($company_id, $id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['anagraficaPut'][0])
+    {
+        $request = $this->anagraficaPutRequest($company_id, $id, $validation_override, $idempotency_key, $anagrafica, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    if ('\Amica\Sdk\Model\Anagrafica' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\Anagrafica' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\Anagrafica', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                case 422:
+                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                case 404:
+                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                case 400:
+                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                case 403:
+                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+            }
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            $returnType = '\Amica\Sdk\Model\Anagrafica';
+            if ($returnType === '\SplFileObject') {
+                $content = $response->getBody(); //stream goes to serializer
+            } else {
+                $content = (string) $response->getBody();
+                if ($returnType !== 'string') {
+                    try {
+                        $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                    } catch (\JsonException $exception) {
+                        throw new ApiException(
+                            sprintf(
+                                'Error JSON decoding server response (%s)',
+                                $request->getUri()
+                            ),
+                            $statusCode,
+                            $response->getHeaders(),
+                            $content
+                        );
+                    }
+                }
+            }
+
+            return [
+                ObjectSerializer::deserialize($content, $returnType, []),
+                $response->getStatusCode(),
+                $response->getHeaders()
+            ];
+
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\Anagrafica',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+                case 422:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\ProblemDetails',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\ProblemDetails',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+                case 400:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\ProblemDetails',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\ProblemDetails',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation anagraficaPutAsync
+     *
+     * Aggiorna un elemento esistente.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
+     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
+     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaPut'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function anagraficaPutAsync($company_id, $id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['anagraficaPut'][0])
+    {
+        return $this->anagraficaPutAsyncWithHttpInfo($company_id, $id, $validation_override, $idempotency_key, $anagrafica, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation anagraficaPutAsyncWithHttpInfo
+     *
+     * Aggiorna un elemento esistente.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
+     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
+     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaPut'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function anagraficaPutAsyncWithHttpInfo($company_id, $id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['anagraficaPut'][0])
+    {
+        $returnType = '\Amica\Sdk\Model\Anagrafica';
+        $request = $this->anagraficaPutRequest($company_id, $id, $validation_override, $idempotency_key, $anagrafica, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'anagraficaPut'
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  int $id ID univoco dell&#39;elemento da aggiornare. (required)
+     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
+     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['anagraficaPut'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function anagraficaPutRequest($company_id, $id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['anagraficaPut'][0])
+    {
+
+        // verify the required parameter 'company_id' is set
+        if ($company_id === null || (is_array($company_id) && count($company_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $company_id when calling anagraficaPut'
+            );
+        }
+
+        // verify the required parameter 'id' is set
+        if ($id === null || (is_array($id) && count($id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $id when calling anagraficaPut'
+            );
+        }
+
+
+
+
+
+        $resourcePath = '/api/v3/{companyId}/Anagrafica/{id}';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $validation_override,
+            'validationOverride', // param base name
+            'boolean', // openApiType
+            'form', // style
+            true, // explode
+            false // required
+        ) ?? []);
+
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
+
         // path params
         if ($company_id !== null) {
             $resourcePath = str_replace(
@@ -2583,899 +3336,6 @@ class AnagraficaApi
         $query = ObjectSerializer::buildQuery($queryParams);
         return new Request(
             'PUT',
-            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
-            $headers,
-            $httpBody
-        );
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaNewGet
-     *
-     * Restituisce una nuova istanza di un contatto del tipo specificato.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaNewGet'] to see the possible values for this operation
-     *
-     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
-     */
-    public function apiVversionCompanyIdAnagraficaNewGet($version, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaNewGet'][0])
-    {
-        list($response) = $this->apiVversionCompanyIdAnagraficaNewGetWithHttpInfo($version, $company_id, $contentType);
-        return $response;
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaNewGetWithHttpInfo
-     *
-     * Restituisce una nuova istanza di un contatto del tipo specificato.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaNewGet'] to see the possible values for this operation
-     *
-     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return array of \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
-     */
-    public function apiVversionCompanyIdAnagraficaNewGetWithHttpInfo($version, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaNewGet'][0])
-    {
-        $request = $this->apiVversionCompanyIdAnagraficaNewGetRequest($version, $company_id, $contentType);
-
-        try {
-            $options = $this->createHttpClientOption();
-            try {
-                $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
-                );
-            } catch (ConnectException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    null,
-                    null
-                );
-            }
-
-            $statusCode = $response->getStatusCode();
-
-
-            switch($statusCode) {
-                case 200:
-                    if ('\Amica\Sdk\Model\Anagrafica' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\Anagrafica' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\Anagrafica', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                case 400:
-                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                case 403:
-                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-            }
-
-            if ($statusCode < 200 || $statusCode > 299) {
-                throw new ApiException(
-                    sprintf(
-                        '[%d] Error connecting to the API (%s)',
-                        $statusCode,
-                        (string) $request->getUri()
-                    ),
-                    $statusCode,
-                    $response->getHeaders(),
-                    (string) $response->getBody()
-                );
-            }
-
-            $returnType = '\Amica\Sdk\Model\Anagrafica';
-            if ($returnType === '\SplFileObject') {
-                $content = $response->getBody(); //stream goes to serializer
-            } else {
-                $content = (string) $response->getBody();
-                if ($returnType !== 'string') {
-                    try {
-                        $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                    } catch (\JsonException $exception) {
-                        throw new ApiException(
-                            sprintf(
-                                'Error JSON decoding server response (%s)',
-                                $request->getUri()
-                            ),
-                            $statusCode,
-                            $response->getHeaders(),
-                            $content
-                        );
-                    }
-                }
-            }
-
-            return [
-                ObjectSerializer::deserialize($content, $returnType, []),
-                $response->getStatusCode(),
-                $response->getHeaders()
-            ];
-
-        } catch (ApiException $e) {
-            switch ($e->getCode()) {
-                case 200:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\Anagrafica',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-                case 400:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\ProblemDetails',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-                case 403:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\ProblemDetails',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-            }
-            throw $e;
-        }
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaNewGetAsync
-     *
-     * Restituisce una nuova istanza di un contatto del tipo specificato.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaNewGet'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function apiVversionCompanyIdAnagraficaNewGetAsync($version, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaNewGet'][0])
-    {
-        return $this->apiVversionCompanyIdAnagraficaNewGetAsyncWithHttpInfo($version, $company_id, $contentType)
-            ->then(
-                function ($response) {
-                    return $response[0];
-                }
-            );
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaNewGetAsyncWithHttpInfo
-     *
-     * Restituisce una nuova istanza di un contatto del tipo specificato.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaNewGet'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function apiVversionCompanyIdAnagraficaNewGetAsyncWithHttpInfo($version, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaNewGet'][0])
-    {
-        $returnType = '\Amica\Sdk\Model\Anagrafica';
-        $request = $this->apiVversionCompanyIdAnagraficaNewGetRequest($version, $company_id, $contentType);
-
-        return $this->client
-            ->sendAsync($request, $this->createHttpClientOption())
-            ->then(
-                function ($response) use ($returnType) {
-                    if ($returnType === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ($returnType !== 'string') {
-                            $content = json_decode($content);
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, $returnType, []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                },
-                function ($exception) {
-                    $response = $exception->getResponse();
-                    $statusCode = $response->getStatusCode();
-                    throw new ApiException(
-                        sprintf(
-                            '[%d] Error connecting to the API (%s)',
-                            $statusCode,
-                            $exception->getRequest()->getUri()
-                        ),
-                        $statusCode,
-                        $response->getHeaders(),
-                        (string) $response->getBody()
-                    );
-                }
-            );
-    }
-
-    /**
-     * Create request for operation 'apiVversionCompanyIdAnagraficaNewGet'
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaNewGet'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Psr7\Request
-     */
-    public function apiVversionCompanyIdAnagraficaNewGetRequest($version, $company_id, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaNewGet'][0])
-    {
-
-        // verify the required parameter 'version' is set
-        if ($version === null || (is_array($version) && count($version) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $version when calling apiVversionCompanyIdAnagraficaNewGet'
-            );
-        }
-
-        // verify the required parameter 'company_id' is set
-        if ($company_id === null || (is_array($company_id) && count($company_id) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $company_id when calling apiVversionCompanyIdAnagraficaNewGet'
-            );
-        }
-
-
-        $resourcePath = '/api/v{version}/{companyId}/Anagrafica/new';
-        $formParams = [];
-        $queryParams = [];
-        $headerParams = [];
-        $httpBody = '';
-        $multipart = false;
-
-
-
-        // path params
-        if ($version !== null) {
-            $resourcePath = str_replace(
-                '{' . 'version' . '}',
-                ObjectSerializer::toPathValue($version),
-                $resourcePath
-            );
-        }
-        // path params
-        if ($company_id !== null) {
-            $resourcePath = str_replace(
-                '{' . 'companyId' . '}',
-                ObjectSerializer::toPathValue($company_id),
-                $resourcePath
-            );
-        }
-
-
-        $headers = $this->headerSelector->selectHeaders(
-            ['application/json', 'application/problem+json', ],
-            $contentType,
-            $multipart
-        );
-
-        // for model (json/xml)
-        if (count($formParams) > 0) {
-            if ($multipart) {
-                $multipartContents = [];
-                foreach ($formParams as $formParamName => $formParamValue) {
-                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
-                    foreach ($formParamValueItems as $formParamValueItem) {
-                        $multipartContents[] = [
-                            'name' => $formParamName,
-                            'contents' => $formParamValueItem
-                        ];
-                    }
-                }
-                // for HTTP post (form)
-                $httpBody = new MultipartStream($multipartContents);
-
-            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
-                # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
-            } else {
-                // for HTTP post (form)
-                $httpBody = ObjectSerializer::buildQuery($formParams);
-            }
-        }
-
-        // this endpoint requires Bearer (JWT) authentication (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-        // this endpoint requires OAuth (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-        // this endpoint requires OAuth (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-
-        $defaultHeaders = [];
-        if ($this->config->getUserAgent()) {
-            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
-        }
-
-        $headers = array_merge(
-            $defaultHeaders,
-            $headerParams,
-            $headers
-        );
-
-        $operationHost = $this->config->getHost();
-        $query = ObjectSerializer::buildQuery($queryParams);
-        return new Request(
-            'GET',
-            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
-            $headers,
-            $httpBody
-        );
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaPost
-     *
-     * Salva un nuovo elemento.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
-     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
-     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaPost'] to see the possible values for this operation
-     *
-     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
-     */
-    public function apiVversionCompanyIdAnagraficaPost($version, $company_id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaPost'][0])
-    {
-        list($response) = $this->apiVversionCompanyIdAnagraficaPostWithHttpInfo($version, $company_id, $validation_override, $idempotency_key, $anagrafica, $contentType);
-        return $response;
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaPostWithHttpInfo
-     *
-     * Salva un nuovo elemento.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
-     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
-     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaPost'] to see the possible values for this operation
-     *
-     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return array of \Amica\Sdk\Model\Anagrafica|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
-     */
-    public function apiVversionCompanyIdAnagraficaPostWithHttpInfo($version, $company_id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaPost'][0])
-    {
-        $request = $this->apiVversionCompanyIdAnagraficaPostRequest($version, $company_id, $validation_override, $idempotency_key, $anagrafica, $contentType);
-
-        try {
-            $options = $this->createHttpClientOption();
-            try {
-                $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
-                );
-            } catch (ConnectException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    null,
-                    null
-                );
-            }
-
-            $statusCode = $response->getStatusCode();
-
-
-            switch($statusCode) {
-                case 201:
-                    if ('\Amica\Sdk\Model\Anagrafica' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\Anagrafica' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\Anagrafica', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                case 409:
-                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                case 400:
-                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                case 403:
-                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-            }
-
-            if ($statusCode < 200 || $statusCode > 299) {
-                throw new ApiException(
-                    sprintf(
-                        '[%d] Error connecting to the API (%s)',
-                        $statusCode,
-                        (string) $request->getUri()
-                    ),
-                    $statusCode,
-                    $response->getHeaders(),
-                    (string) $response->getBody()
-                );
-            }
-
-            $returnType = '\Amica\Sdk\Model\Anagrafica';
-            if ($returnType === '\SplFileObject') {
-                $content = $response->getBody(); //stream goes to serializer
-            } else {
-                $content = (string) $response->getBody();
-                if ($returnType !== 'string') {
-                    try {
-                        $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                    } catch (\JsonException $exception) {
-                        throw new ApiException(
-                            sprintf(
-                                'Error JSON decoding server response (%s)',
-                                $request->getUri()
-                            ),
-                            $statusCode,
-                            $response->getHeaders(),
-                            $content
-                        );
-                    }
-                }
-            }
-
-            return [
-                ObjectSerializer::deserialize($content, $returnType, []),
-                $response->getStatusCode(),
-                $response->getHeaders()
-            ];
-
-        } catch (ApiException $e) {
-            switch ($e->getCode()) {
-                case 201:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\Anagrafica',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-                case 409:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\ProblemDetails',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-                case 400:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\ProblemDetails',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-                case 403:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Amica\Sdk\Model\ProblemDetails',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-            }
-            throw $e;
-        }
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaPostAsync
-     *
-     * Salva un nuovo elemento.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
-     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
-     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaPost'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function apiVversionCompanyIdAnagraficaPostAsync($version, $company_id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaPost'][0])
-    {
-        return $this->apiVversionCompanyIdAnagraficaPostAsyncWithHttpInfo($version, $company_id, $validation_override, $idempotency_key, $anagrafica, $contentType)
-            ->then(
-                function ($response) {
-                    return $response[0];
-                }
-            );
-    }
-
-    /**
-     * Operation apiVversionCompanyIdAnagraficaPostAsyncWithHttpInfo
-     *
-     * Salva un nuovo elemento.
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
-     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
-     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaPost'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function apiVversionCompanyIdAnagraficaPostAsyncWithHttpInfo($version, $company_id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaPost'][0])
-    {
-        $returnType = '\Amica\Sdk\Model\Anagrafica';
-        $request = $this->apiVversionCompanyIdAnagraficaPostRequest($version, $company_id, $validation_override, $idempotency_key, $anagrafica, $contentType);
-
-        return $this->client
-            ->sendAsync($request, $this->createHttpClientOption())
-            ->then(
-                function ($response) use ($returnType) {
-                    if ($returnType === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ($returnType !== 'string') {
-                            $content = json_decode($content);
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, $returnType, []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                },
-                function ($exception) {
-                    $response = $exception->getResponse();
-                    $statusCode = $response->getStatusCode();
-                    throw new ApiException(
-                        sprintf(
-                            '[%d] Error connecting to the API (%s)',
-                            $statusCode,
-                            $exception->getRequest()->getUri()
-                        ),
-                        $statusCode,
-                        $response->getHeaders(),
-                        (string) $response->getBody()
-                    );
-                }
-            );
-    }
-
-    /**
-     * Create request for operation 'apiVversionCompanyIdAnagraficaPost'
-     *
-     * @param  string $version Versione API. (required)
-     * @param  string $company_id ID univoco dell&#39;azienda. (required)
-     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
-     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
-     * @param  \Amica\Sdk\Model\Anagrafica|null $anagrafica Istanza dell&#39;elemento da salvare. (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['apiVversionCompanyIdAnagraficaPost'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Psr7\Request
-     */
-    public function apiVversionCompanyIdAnagraficaPostRequest($version, $company_id, $validation_override = null, $idempotency_key = null, $anagrafica = null, string $contentType = self::contentTypes['apiVversionCompanyIdAnagraficaPost'][0])
-    {
-
-        // verify the required parameter 'version' is set
-        if ($version === null || (is_array($version) && count($version) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $version when calling apiVversionCompanyIdAnagraficaPost'
-            );
-        }
-
-        // verify the required parameter 'company_id' is set
-        if ($company_id === null || (is_array($company_id) && count($company_id) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $company_id when calling apiVversionCompanyIdAnagraficaPost'
-            );
-        }
-
-
-
-
-
-        $resourcePath = '/api/v{version}/{companyId}/Anagrafica';
-        $formParams = [];
-        $queryParams = [];
-        $headerParams = [];
-        $httpBody = '';
-        $multipart = false;
-
-        // query params
-        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
-            $validation_override,
-            'validationOverride', // param base name
-            'boolean', // openApiType
-            'form', // style
-            true, // explode
-            false // required
-        ) ?? []);
-
-        // header params
-        if ($idempotency_key !== null) {
-            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
-        }
-
-        // path params
-        if ($version !== null) {
-            $resourcePath = str_replace(
-                '{' . 'version' . '}',
-                ObjectSerializer::toPathValue($version),
-                $resourcePath
-            );
-        }
-        // path params
-        if ($company_id !== null) {
-            $resourcePath = str_replace(
-                '{' . 'companyId' . '}',
-                ObjectSerializer::toPathValue($company_id),
-                $resourcePath
-            );
-        }
-
-
-        $headers = $this->headerSelector->selectHeaders(
-            ['application/json', 'application/problem+json', ],
-            $contentType,
-            $multipart
-        );
-
-        // for model (json/xml)
-        if (isset($anagrafica)) {
-            if (stripos($headers['Content-Type'], 'application/json') !== false) {
-                # if Content-Type contains "application/json", json_encode the body
-                $httpBody = \GuzzleHttp\Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($anagrafica));
-            } else {
-                $httpBody = $anagrafica;
-            }
-        } elseif (count($formParams) > 0) {
-            if ($multipart) {
-                $multipartContents = [];
-                foreach ($formParams as $formParamName => $formParamValue) {
-                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
-                    foreach ($formParamValueItems as $formParamValueItem) {
-                        $multipartContents[] = [
-                            'name' => $formParamName,
-                            'contents' => $formParamValueItem
-                        ];
-                    }
-                }
-                // for HTTP post (form)
-                $httpBody = new MultipartStream($multipartContents);
-
-            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
-                # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
-            } else {
-                // for HTTP post (form)
-                $httpBody = ObjectSerializer::buildQuery($formParams);
-            }
-        }
-
-        // this endpoint requires Bearer (JWT) authentication (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-        // this endpoint requires OAuth (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-        // this endpoint requires OAuth (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-
-        $defaultHeaders = [];
-        if ($this->config->getUserAgent()) {
-            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
-        }
-
-        $headers = array_merge(
-            $defaultHeaders,
-            $headerParams,
-            $headers
-        );
-
-        $operationHost = $this->config->getHost();
-        $query = ObjectSerializer::buildQuery($queryParams);
-        return new Request(
-            'POST',
             $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
             $headers,
             $httpBody

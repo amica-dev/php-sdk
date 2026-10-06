@@ -4,13 +4,13 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 
 | Method | HTTP request | Description |
 | ------------- | ------------- | ------------- |
-| [**apiVversionCompanyIdTabelleCassaPrevidenzialeGet()**](CassaPrevidenzialeApi.md#apiVversionCompanyIdTabelleCassaPrevidenzialeGet) | **GET** /api/v{version}/{companyId}/tabelle/CassaPrevidenziale | Restituisce il contenuto della tabella come lista di elementi. |
+| [**cassaPrevidenzialeList()**](CassaPrevidenzialeApi.md#cassaPrevidenzialeList) | **GET** /api/v3/{companyId}/tabelle/CassaPrevidenziale | Restituisce il contenuto della tabella come lista di elementi. |
 
 
-## `apiVversionCompanyIdTabelleCassaPrevidenzialeGet()`
+## `cassaPrevidenzialeList()`
 
 ```php
-apiVversionCompanyIdTabelleCassaPrevidenzialeGet($company_id, $version): \Amica\Sdk\Model\CassaPrevidenziale[]
+cassaPrevidenzialeList($company_id): \Amica\Sdk\Model\CassaPrevidenziale[]
 ```
 
 Restituisce il contenuto della tabella come lista di elementi.
@@ -39,13 +39,12 @@ $apiInstance = new Amica\Sdk\Api\CassaPrevidenzialeApi(
     $config
 );
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
-$version = 'version_example'; // string
 
 try {
-    $result = $apiInstance->apiVversionCompanyIdTabelleCassaPrevidenzialeGet($company_id, $version);
+    $result = $apiInstance->cassaPrevidenzialeList($company_id);
     print_r($result);
 } catch (Exception $e) {
-    echo 'Exception when calling CassaPrevidenzialeApi->apiVversionCompanyIdTabelleCassaPrevidenzialeGet: ', $e->getMessage(), PHP_EOL;
+    echo 'Exception when calling CassaPrevidenzialeApi->cassaPrevidenzialeList: ', $e->getMessage(), PHP_EOL;
 }
 ```
 
@@ -54,7 +53,6 @@ try {
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
-| **version** | **string**|  | |
 
 ### Return type
 

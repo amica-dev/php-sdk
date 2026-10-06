@@ -4,13 +4,13 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 
 | Method | HTTP request | Description |
 | ------------- | ------------- | ------------- |
-| [**apiVversionCompanyIdTabelleNaturaIvaGet()**](NaturaIvaApi.md#apiVversionCompanyIdTabelleNaturaIvaGet) | **GET** /api/v{version}/{companyId}/tabelle/NaturaIva | Restituisce il contenuto della tabella come lista di elementi. |
+| [**naturaIvaList()**](NaturaIvaApi.md#naturaIvaList) | **GET** /api/v3/{companyId}/tabelle/NaturaIva | Restituisce il contenuto della tabella come lista di elementi. |
 
 
-## `apiVversionCompanyIdTabelleNaturaIvaGet()`
+## `naturaIvaList()`
 
 ```php
-apiVversionCompanyIdTabelleNaturaIvaGet($company_id, $version): \Amica\Sdk\Model\NaturaIva[]
+naturaIvaList($company_id): \Amica\Sdk\Model\NaturaIva[]
 ```
 
 Restituisce il contenuto della tabella come lista di elementi.
@@ -39,13 +39,12 @@ $apiInstance = new Amica\Sdk\Api\NaturaIvaApi(
     $config
 );
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
-$version = 'version_example'; // string
 
 try {
-    $result = $apiInstance->apiVversionCompanyIdTabelleNaturaIvaGet($company_id, $version);
+    $result = $apiInstance->naturaIvaList($company_id);
     print_r($result);
 } catch (Exception $e) {
-    echo 'Exception when calling NaturaIvaApi->apiVversionCompanyIdTabelleNaturaIvaGet: ', $e->getMessage(), PHP_EOL;
+    echo 'Exception when calling NaturaIvaApi->naturaIvaList: ', $e->getMessage(), PHP_EOL;
 }
 ```
 
@@ -54,7 +53,6 @@ try {
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
-| **version** | **string**|  | |
 
 ### Return type
 

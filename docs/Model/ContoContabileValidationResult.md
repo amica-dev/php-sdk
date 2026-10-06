@@ -4,9 +4,9 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**conto_id** | **int** |  | [optional]
-**conto** | **string** |  | [optional]
-**sezione** | **string** |  | [optional]
-**errori** | **string** |  | [optional]
+**conto_id** | **int** | Identificativo univoco del &#x60;ContoContabile&#x60;. | [optional]
+**conto** | **string** | Numero di conto (ad es. \&quot;100.20\&quot;). | [optional]
+**sezione** | **string** | Sezione dopo la correzione. | [optional]
+**errori** | **string** | Errore di validazione. | [optional]
 
 [[Back to Model list]](../../README.md#models) [[Back to API list]](../../README.md#endpoints) [[Back to README]](../../README.md)

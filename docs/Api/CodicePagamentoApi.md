@@ -4,13 +4,13 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 
 | Method | HTTP request | Description |
 | ------------- | ------------- | ------------- |
-| [**apiVversionCompanyIdTabelleCodicePagamentoGet()**](CodicePagamentoApi.md#apiVversionCompanyIdTabelleCodicePagamentoGet) | **GET** /api/v{version}/{companyId}/tabelle/CodicePagamento | Restituisce il contenuto della tabella come lista di elementi. |
+| [**codicePagamentoList()**](CodicePagamentoApi.md#codicePagamentoList) | **GET** /api/v3/{companyId}/tabelle/CodicePagamento | Restituisce il contenuto della tabella come lista di elementi. |
 
 
-## `apiVversionCompanyIdTabelleCodicePagamentoGet()`
+## `codicePagamentoList()`
 
 ```php
-apiVversionCompanyIdTabelleCodicePagamentoGet($company_id, $version): \Amica\Sdk\Model\CodicePagamento[]
+codicePagamentoList($company_id): \Amica\Sdk\Model\CodicePagamento[]
 ```
 
 Restituisce il contenuto della tabella come lista di elementi.
@@ -39,13 +39,12 @@ $apiInstance = new Amica\Sdk\Api\CodicePagamentoApi(
     $config
 );
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
-$version = 'version_example'; // string
 
 try {
-    $result = $apiInstance->apiVversionCompanyIdTabelleCodicePagamentoGet($company_id, $version);
+    $result = $apiInstance->codicePagamentoList($company_id);
     print_r($result);
 } catch (Exception $e) {
-    echo 'Exception when calling CodicePagamentoApi->apiVversionCompanyIdTabelleCodicePagamentoGet: ', $e->getMessage(), PHP_EOL;
+    echo 'Exception when calling CodicePagamentoApi->codicePagamentoList: ', $e->getMessage(), PHP_EOL;
 }
 ```
 
@@ -54,7 +53,6 @@ try {
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
-| **version** | **string**|  | |
 
 ### Return type
 
