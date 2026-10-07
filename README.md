@@ -149,7 +149,7 @@ $config = Amica\Sdk\Configuration::getDefaultConfiguration()
 $apiInstance = new Amica\Sdk\Api\AziendaApi(new GuzzleHttp\Client(), $config);
 
 try {
-    $result = $apiInstance->apiVversionConfigAziendaGet('3');
+    $result = $apiInstance->aziendaList();
     print_r($result);
 } catch (Exception $e) {
     echo "Errore nella chiamata all'API: ", $e->getMessage(), PHP_EOL;
