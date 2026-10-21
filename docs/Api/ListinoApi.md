@@ -15,7 +15,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 ## `listinoDelete()`
 
 ```php
-listinoDelete($company_id, $id): \Amica\Sdk\Model\Listino
+listinoDelete($company_id, $id, $validation_override): \Amica\Sdk\Model\Listino
 ```
 
 Elimina un elemento.
@@ -45,9 +45,10 @@ $apiInstance = new Amica\Sdk\Api\ListinoApi(
 );
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
 $id = 56; // int | ID dell'elemento da eliminare.
+$validation_override = True; // bool | Se applicare eventualmente l'override della validazione.
 
 try {
-    $result = $apiInstance->listinoDelete($company_id, $id);
+    $result = $apiInstance->listinoDelete($company_id, $id, $validation_override);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling ListinoApi->listinoDelete: ', $e->getMessage(), PHP_EOL;
@@ -60,6 +61,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
 | **id** | **int**| ID dell&#39;elemento da eliminare. | |
+| **validation_override** | **bool**| Se applicare eventualmente l&#39;override della validazione. | [optional] |
 
 ### Return type
 

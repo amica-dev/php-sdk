@@ -7,7 +7,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 | [**scadenzaDelete()**](ScadenzaApi.md#scadenzaDelete) | **DELETE** /api/v3/{companyId}/Scadenza/{id} | Elimina un elemento. |
 | [**scadenzaDistinct()**](ScadenzaApi.md#scadenzaDistinct) | **GET** /api/v3/{companyId}/Scadenza/distinct | Restituisce una lista di elementi distinti. |
 | [**scadenzaGet()**](ScadenzaApi.md#scadenzaGet) | **GET** /api/v3/{companyId}/Scadenza/{id} | Restituisce un elemento. |
-| [**scadenzaList()**](ScadenzaApi.md#scadenzaList) | **GET** /api/v3/{companyId}/Scadenza | Restituisce una lista di elementi. |
+| [**scadenzaList()**](ScadenzaApi.md#scadenzaList) | **GET** /api/v3/{companyId}/Scadenza | Restituisce una lista di scadenze, eventualmente solo aperte o solo saldate. |
 | [**scadenzaNewInstance()**](ScadenzaApi.md#scadenzaNewInstance) | **GET** /api/v3/{companyId}/Scadenza/new | Restituisce una nuova istanza di una scadenza del tipo specificato. |
 | [**scadenzaPost()**](ScadenzaApi.md#scadenzaPost) | **POST** /api/v3/{companyId}/Scadenza | Salva un nuovo elemento. |
 | [**scadenzaPut()**](ScadenzaApi.md#scadenzaPut) | **PUT** /api/v3/{companyId}/Scadenza/{id} | Aggiorna un elemento esistente. |
@@ -16,7 +16,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 ## `scadenzaDelete()`
 
 ```php
-scadenzaDelete($company_id, $id): \Amica\Sdk\Model\Scadenza
+scadenzaDelete($company_id, $id, $validation_override): \Amica\Sdk\Model\Scadenza
 ```
 
 Elimina un elemento.
@@ -46,9 +46,10 @@ $apiInstance = new Amica\Sdk\Api\ScadenzaApi(
 );
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
 $id = 56; // int | ID dell'elemento da eliminare.
+$validation_override = True; // bool | Se applicare eventualmente l'override della validazione.
 
 try {
-    $result = $apiInstance->scadenzaDelete($company_id, $id);
+    $result = $apiInstance->scadenzaDelete($company_id, $id, $validation_override);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling ScadenzaApi->scadenzaDelete: ', $e->getMessage(), PHP_EOL;
@@ -61,6 +62,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
 | **id** | **int**| ID dell&#39;elemento da eliminare. | |
+| **validation_override** | **bool**| Se applicare eventualmente l&#39;override della validazione. | [optional] |
 
 ### Return type
 
@@ -220,12 +222,12 @@ try {
 ## `scadenzaList()`
 
 ```php
-scadenzaList($company_id, $skip, $take, $skip_total_count, $filter, $order, $expand): \Amica\Sdk\Model\Scadenza[]
+scadenzaList($company_id, $stato, $skip, $take, $skip_total_count, $filter, $order, $expand): \Amica\Sdk\Model\Scadenza[]
 ```
 
-Restituisce una lista di elementi.
+Restituisce una lista di scadenze, eventualmente solo aperte o solo saldate.
 
-La risposta include due header con informazioni sui risultati.  `X-Read-TotalCount` indica il numero di elementi che soddisfano il filtro impostato nella query;  `X-Read-Count` indica il numero di elementi effettivamente contenuti nella risposta.  I due header possono riportare valori diversi quando i parametri `Take` e `Skip` sono stati usati nelle opzioni di query.
+La risposta include due header con informazioni sui risultati.  `X-Read-TotalCount` indica il numero di elementi che soddisfano il filtro e lo stato impostati nella query;  `X-Read-Count` indica il numero di elementi effettivamente contenuti nella risposta.  I due header possono riportare valori diversi quando i parametri `Take` e `Skip` sono stati usati nelle opzioni di query.
 
 ### Example
 
@@ -251,6 +253,7 @@ $apiInstance = new Amica\Sdk\Api\ScadenzaApi(
     $config
 );
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
+$stato = Aperta; // string | Stato di pagamento: `Aperta` (con un importo ancora da pagare, comprese le parzialmente pagate e quelle pagate in eccesso) o `Saldata`. Senza stato si restituiscono tutte le scadenze. Una scadenza è saldata se l'importo pagato, manualmente o dalla contabilità, coincide con l'importo al centesimo; le scadenze a importo zero non sono né aperte né saldate.
 $skip = 100; // int | Numero di elementi da escludere dall'inizio del risultato. Combinato con `Take`, è utile per la paginazione.
 $take = 25; // int | Numero di elementi da includere nel risultato. Combinato con `Skip`, è utile per la paginazione.
 $skip_total_count = True; // bool | Indica se l'header `X-Read-TotalCount` debba essere escluso dalla risposta. Impostare a `true` per prestazioni migliori a scapito dell'accuratezza. Il valore predefinito è `false`.
@@ -259,7 +262,7 @@ $order = -field1,field2; // string | Opzioni di ordinamento. Un segno meno (trat
 $expand = Rows; // string[] | Elenco separato da virgole di oggetti da espandere. Permette di recuperare gli oggetti correlati in un'unica chiamata. Ad esempio, per includere i beni e servizi associati a ciascun documento si aggiunge `expand=Rows` alla chiamata.
 
 try {
-    $result = $apiInstance->scadenzaList($company_id, $skip, $take, $skip_total_count, $filter, $order, $expand);
+    $result = $apiInstance->scadenzaList($company_id, $stato, $skip, $take, $skip_total_count, $filter, $order, $expand);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling ScadenzaApi->scadenzaList: ', $e->getMessage(), PHP_EOL;
@@ -271,6 +274,7 @@ try {
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
+| **stato** | **string**| Stato di pagamento: &#x60;Aperta&#x60; (con un importo ancora da pagare, comprese le parzialmente pagate e quelle pagate in eccesso) o &#x60;Saldata&#x60;. Senza stato si restituiscono tutte le scadenze. Una scadenza è saldata se l&#39;importo pagato, manualmente o dalla contabilità, coincide con l&#39;importo al centesimo; le scadenze a importo zero non sono né aperte né saldate. | [optional] |
 | **skip** | **int**| Numero di elementi da escludere dall&#39;inizio del risultato. Combinato con &#x60;Take&#x60;, è utile per la paginazione. | [optional] |
 | **take** | **int**| Numero di elementi da includere nel risultato. Combinato con &#x60;Skip&#x60;, è utile per la paginazione. | [optional] |
 | **skip_total_count** | **bool**| Indica se l&#39;header &#x60;X-Read-TotalCount&#x60; debba essere escluso dalla risposta. Impostare a &#x60;true&#x60; per prestazioni migliori a scapito dell&#39;accuratezza. Il valore predefinito è &#x60;false&#x60;. | [optional] |

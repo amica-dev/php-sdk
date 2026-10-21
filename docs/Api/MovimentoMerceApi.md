@@ -4,19 +4,91 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 
 | Method | HTTP request | Description |
 | ------------- | ------------- | ------------- |
+| [**movimentoMerceComputeRiga()**](MovimentoMerceApi.md#movimentoMerceComputeRiga) | **POST** /api/v3/{companyId}/MovimentoMerce/riga/compute | Completa una riga di movimento dopo una modifica e ne calcola prezzi e importi, come il client Windows. |
 | [**movimentoMerceDelete()**](MovimentoMerceApi.md#movimentoMerceDelete) | **DELETE** /api/v3/{companyId}/MovimentoMerce/{id} | Elimina un elemento. |
 | [**movimentoMerceDistinct()**](MovimentoMerceApi.md#movimentoMerceDistinct) | **GET** /api/v3/{companyId}/MovimentoMerce/distinct | Restituisce una lista di elementi distinti. |
 | [**movimentoMerceGet()**](MovimentoMerceApi.md#movimentoMerceGet) | **GET** /api/v3/{companyId}/MovimentoMerce/{id} | Restituisce un elemento. |
 | [**movimentoMerceList()**](MovimentoMerceApi.md#movimentoMerceList) | **GET** /api/v3/{companyId}/MovimentoMerce | Restituisce una lista di elementi. |
 | [**movimentoMerceNewInstance()**](MovimentoMerceApi.md#movimentoMerceNewInstance) | **GET** /api/v3/{companyId}/MovimentoMerce/new | Restituisce una nuova istanza di un oggetto. Dove necessario, i valori delle proprietà saranno coerenti con lo stato e la logica dell&#39;applicazione (ad es., una nuova istanza di &#x60;Documento&#x60; avrà il &#x60;Numero&#x60; appropriato, basato sui documenti preesistenti di tipo compatibile). |
+| [**movimentoMerceNewInstanceRiga()**](MovimentoMerceApi.md#movimentoMerceNewInstanceRiga) | **GET** /api/v3/{companyId}/MovimentoMerce/riga/new | Restituisce una nuova riga di movimento, con magazzino e listino predefiniti delle preferenze. |
 | [**movimentoMercePost()**](MovimentoMerceApi.md#movimentoMercePost) | **POST** /api/v3/{companyId}/MovimentoMerce | Salva un nuovo elemento. |
 | [**movimentoMercePut()**](MovimentoMerceApi.md#movimentoMercePut) | **PUT** /api/v3/{companyId}/MovimentoMerce/{id} | Aggiorna un elemento esistente. |
 
 
+## `movimentoMerceComputeRiga()`
+
+```php
+movimentoMerceComputeRiga($company_id, $idempotency_key, $movimento_merce_riga_compute_data): \Amica\Sdk\Model\MovimentoMerceRigaComputeResult
+```
+
+Completa una riga di movimento dopo una modifica e ne calcola prezzi e importi, come il client Windows.
+
+Cosa si ricalcola dipende da `modificato`:              - `Articolo`: magazzino (se manca e ce n'è uno solo), listino e causale IVA dalla scheda cliente o, con una   causale di magazzino di carico, fornitore dell'anagrafica; poi la causale IVA dell'articolo o l'unica esistente,   la taglia per gli articoli a taglie e colori e il prezzo da listino. Senza `causaleMagazzinoId`   l'anagrafica non si usa. - `Listino`: il prezzo da listino, anche se il prezzo era stato inserito a mano. Dipende dal calcolo dei prezzi   del listino (a mano, o costo ultimo o medio dell'articolo più il ricarico), al netto dei quattro sconti; se il   listino è a IVA inclusa si scorpora. Se il listino non ha l'articolo i prezzi vanno a zero. - `PrezzoNetto` o `PrezzoIvato`: l'altro prezzo. - `CausaleIva` (o nessun valore): il prezzo che con `ivaEsclusa` non si scrive, con la nuova aliquota. - `Quantità`: solo gli importi.              Gli importi sono sempre quantità per prezzo. I prezzi non si arrotondano. Non si salva niente, e il movimento può non esistere ancora. La riga non si valida: magazzino e articolo possono essere ancora 0.
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer (JWT) authorization: bearer
+$config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
+$config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+// Configure OAuth2 access token for authorization: oauth2
+$config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Amica\Sdk\Api\MovimentoMerceApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$company_id = 'company_id_example'; // string | ID univoco dell'azienda.
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
+$movimento_merce_riga_compute_data = new \Amica\Sdk\Model\MovimentoMerceRigaComputeData(); // \Amica\Sdk\Model\MovimentoMerceRigaComputeData | La riga, i dati della testata e il campo modificato.
+
+try {
+    $result = $apiInstance->movimentoMerceComputeRiga($company_id, $idempotency_key, $movimento_merce_riga_compute_data);
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling MovimentoMerceApi->movimentoMerceComputeRiga: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **company_id** | **string**| ID univoco dell&#39;azienda. | |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
+| **movimento_merce_riga_compute_data** | [**\Amica\Sdk\Model\MovimentoMerceRigaComputeData**](../Model/MovimentoMerceRigaComputeData.md)| La riga, i dati della testata e il campo modificato. | [optional] |
+
+### Return type
+
+[**\Amica\Sdk\Model\MovimentoMerceRigaComputeResult**](../Model/MovimentoMerceRigaComputeResult.md)
+
+### Authorization
+
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`, `text/json`, `application/*+json`
+- **Accept**: `application/json`, `application/problem+json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
 ## `movimentoMerceDelete()`
 
 ```php
-movimentoMerceDelete($company_id, $id): \Amica\Sdk\Model\MovimentoMerce
+movimentoMerceDelete($company_id, $id, $validation_override): \Amica\Sdk\Model\MovimentoMerce
 ```
 
 Elimina un elemento.
@@ -46,9 +118,10 @@ $apiInstance = new Amica\Sdk\Api\MovimentoMerceApi(
 );
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
 $id = 56; // int | ID dell'elemento da eliminare.
+$validation_override = True; // bool | Se applicare eventualmente l'override della validazione.
 
 try {
-    $result = $apiInstance->movimentoMerceDelete($company_id, $id);
+    $result = $apiInstance->movimentoMerceDelete($company_id, $id, $validation_override);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling MovimentoMerceApi->movimentoMerceDelete: ', $e->getMessage(), PHP_EOL;
@@ -61,6 +134,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
 | **id** | **int**| ID dell&#39;elemento da eliminare. | |
+| **validation_override** | **bool**| Se applicare eventualmente l&#39;override della validazione. | [optional] |
 
 ### Return type
 
@@ -345,6 +419,72 @@ try {
 ### Return type
 
 [**\Amica\Sdk\Model\MovimentoMerce**](../Model/MovimentoMerce.md)
+
+### Authorization
+
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`, `application/problem+json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `movimentoMerceNewInstanceRiga()`
+
+```php
+movimentoMerceNewInstanceRiga($company_id): \Amica\Sdk\Model\MovimentoMerceRiga
+```
+
+Restituisce una nuova riga di movimento, con magazzino e listino predefiniti delle preferenze.
+
+Non serve un movimento salvato: `movimentoMerceId` è 0.
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer (JWT) authorization: bearer
+$config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
+$config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+// Configure OAuth2 access token for authorization: oauth2
+$config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Amica\Sdk\Api\MovimentoMerceApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$company_id = 'company_id_example'; // string | ID univoco dell'azienda.
+
+try {
+    $result = $apiInstance->movimentoMerceNewInstanceRiga($company_id);
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling MovimentoMerceApi->movimentoMerceNewInstanceRiga: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **company_id** | **string**| ID univoco dell&#39;azienda. | |
+
+### Return type
+
+[**\Amica\Sdk\Model\MovimentoMerceRiga**](../Model/MovimentoMerceRiga.md)
 
 ### Authorization
 

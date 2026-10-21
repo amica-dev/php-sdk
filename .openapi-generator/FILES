@@ -7,6 +7,7 @@ composer.json
 docs/Api/AnagraficaApi.md
 docs/Api/AreaGeograficaApi.md
 docs/Api/ArticoloApi.md
+docs/Api/ArticoloColoreApi.md
 docs/Api/ArticoloMediaFileApi.md
 docs/Api/AziendaApi.md
 docs/Api/BeneServizioApi.md
@@ -58,6 +59,7 @@ docs/Model/AnagraficaNominativo2.md
 docs/Model/AnagraficaSedeLegale.md
 docs/Model/AreaGeografica.md
 docs/Model/Articolo.md
+docs/Model/ArticoloColore.md
 docs/Model/ArticoloMediaFile.md
 docs/Model/Azienda.md
 docs/Model/Banca.md
@@ -120,6 +122,8 @@ docs/Model/ModelloContabile.md
 docs/Model/ModelloContabileRiga.md
 docs/Model/MovimentoMerce.md
 docs/Model/MovimentoMerceRiga.md
+docs/Model/MovimentoMerceRigaComputeData.md
+docs/Model/MovimentoMerceRigaComputeResult.md
 docs/Model/NaturaIva.md
 docs/Model/Nazione.md
 docs/Model/OrdiniImportData.md
@@ -151,6 +155,7 @@ git_push.sh
 lib/Api/AnagraficaApi.php
 lib/Api/AreaGeograficaApi.php
 lib/Api/ArticoloApi.php
+lib/Api/ArticoloColoreApi.php
 lib/Api/ArticoloMediaFileApi.php
 lib/Api/AziendaApi.php
 lib/Api/BeneServizioApi.php
@@ -205,6 +210,7 @@ lib/Model/AnagraficaNominativo2.php
 lib/Model/AnagraficaSedeLegale.php
 lib/Model/AreaGeografica.php
 lib/Model/Articolo.php
+lib/Model/ArticoloColore.php
 lib/Model/ArticoloMediaFile.php
 lib/Model/Azienda.php
 lib/Model/Banca.php
@@ -268,6 +274,8 @@ lib/Model/ModelloContabile.php
 lib/Model/ModelloContabileRiga.php
 lib/Model/MovimentoMerce.php
 lib/Model/MovimentoMerceRiga.php
+lib/Model/MovimentoMerceRigaComputeData.php
+lib/Model/MovimentoMerceRigaComputeResult.php
 lib/Model/NaturaIva.php
 lib/Model/Nazione.php
 lib/Model/OrdiniImportData.php
@@ -300,6 +308,7 @@ phpunit.xml.dist
 test/Api/AnagraficaApiTest.php
 test/Api/AreaGeograficaApiTest.php
 test/Api/ArticoloApiTest.php
+test/Api/ArticoloColoreApiTest.php
 test/Api/ArticoloMediaFileApiTest.php
 test/Api/AziendaApiTest.php
 test/Api/BeneServizioApiTest.php
@@ -350,6 +359,7 @@ test/Model/AnagraficaNominativo2Test.php
 test/Model/AnagraficaSedeLegaleTest.php
 test/Model/AnagraficaTest.php
 test/Model/AreaGeograficaTest.php
+test/Model/ArticoloColoreTest.php
 test/Model/ArticoloMediaFileTest.php
 test/Model/ArticoloTest.php
 test/Model/AziendaTest.php
@@ -411,6 +421,8 @@ test/Model/MarcaTest.php
 test/Model/ModalitaPagamentoTest.php
 test/Model/ModelloContabileRigaTest.php
 test/Model/ModelloContabileTest.php
+test/Model/MovimentoMerceRigaComputeDataTest.php
+test/Model/MovimentoMerceRigaComputeResultTest.php
 test/Model/MovimentoMerceRigaTest.php
 test/Model/MovimentoMerceTest.php
 test/Model/NaturaIvaTest.php

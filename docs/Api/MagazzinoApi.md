@@ -15,7 +15,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 ## `magazzinoDelete()`
 
 ```php
-magazzinoDelete($company_id, $id): \Amica\Sdk\Model\Magazzino
+magazzinoDelete($company_id, $id, $validation_override): \Amica\Sdk\Model\Magazzino
 ```
 
 Elimina un elemento.
@@ -45,9 +45,10 @@ $apiInstance = new Amica\Sdk\Api\MagazzinoApi(
 );
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
 $id = 56; // int | ID dell'elemento da eliminare.
+$validation_override = True; // bool | Se applicare eventualmente l'override della validazione.
 
 try {
-    $result = $apiInstance->magazzinoDelete($company_id, $id);
+    $result = $apiInstance->magazzinoDelete($company_id, $id, $validation_override);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling MagazzinoApi->magazzinoDelete: ', $e->getMessage(), PHP_EOL;
@@ -60,6 +61,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
 | **id** | **int**| ID dell&#39;elemento da eliminare. | |
+| **validation_override** | **bool**| Se applicare eventualmente l&#39;override della validazione. | [optional] |
 
 ### Return type
 

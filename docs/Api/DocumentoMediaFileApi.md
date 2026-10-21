@@ -143,7 +143,7 @@ void (empty response body)
 ## `documentoMediaFileDelete()`
 
 ```php
-documentoMediaFileDelete($company_id, $id): \Amica\Sdk\Model\DocumentoMediaFile
+documentoMediaFileDelete($company_id, $id, $validation_override): \Amica\Sdk\Model\DocumentoMediaFile
 ```
 
 Elimina un elemento.
@@ -173,9 +173,10 @@ $apiInstance = new Amica\Sdk\Api\DocumentoMediaFileApi(
 );
 $company_id = 'company_id_example'; // string | ID univoco dell'azienda.
 $id = 56; // int | ID dell'elemento da eliminare.
+$validation_override = True; // bool | Se applicare eventualmente l'override della validazione.
 
 try {
-    $result = $apiInstance->documentoMediaFileDelete($company_id, $id);
+    $result = $apiInstance->documentoMediaFileDelete($company_id, $id, $validation_override);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling DocumentoMediaFileApi->documentoMediaFileDelete: ', $e->getMessage(), PHP_EOL;
@@ -188,6 +189,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **company_id** | **string**| ID univoco dell&#39;azienda. | |
 | **id** | **int**| ID dell&#39;elemento da eliminare. | |
+| **validation_override** | **bool**| Se applicare eventualmente l&#39;override della validazione. | [optional] |
 
 ### Return type
 

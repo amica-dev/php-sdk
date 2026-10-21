@@ -14,7 +14,7 @@
  *
  * L'Amica Cloud API fornisce accesso programmatico a tutti i dati aziendali gestiti da [Amica 20](https://gestionaleamica.com). Supporta il ciclo completo di documenti, fatture, magazzino, contabilità e anagrafiche. Per guide e documentazione completa, visitare [amica.dev](https://amica.dev/).  ## Autenticazione  Tutte le richieste API richiedono un token OAuth 2.0 Bearer valido, da includere nell'header `Authorization`:  ``` Authorization: Bearer <token> ```  ### Registra la tua app  Per integrare l'Amica Cloud API registra la tua applicazione sull'[**App Store di Amica**](https://apps.amica20.it). Al termine della registrazione ottieni una coppia di credenziali OAuth 2.0 — `client_id` e `client_secret` (il secret è mostrato **una sola volta**) — e scegli gli **scope** e il **flusso di autenticazione** desiderati.  ### Scegli il flusso  La scelta dipende da **come** la tua applicazione si autentica:  - C'è un **utente** che può accedere via browser (web app, SPA, app mobile)? → **Authorization Code con PKCE**. - È un **servizio headless** (backend, batch, integrazione server-to-server) di una **singola azienda**, senza un utente che effettua il login? → **Client Credentials**.  #### Authorization Code con PKCE  Consigliato per le app che operano per conto di un utente Amica ed è l'**unico flusso disponibile per le app pubblicate sul marketplace**. Una sola registrazione serve un numero qualsiasi di aziende: ogni utente autorizza la tua app per la propria azienda tramite la pagina di consenso dell'identity provider, e il token riceve automaticamente il contesto di quell'azienda. La tua app riceve un `code` da scambiare con un access token.  ``` GET  {identity-provider}/connect/authorize?response_type=code&client_id=<client_id>&redirect_uri=<redirect_uri>&scope=openid%20read%20write%20documenti&code_challenge=<challenge>&code_challenge_method=S256 POST {identity-provider}/connect/token      grant_type=authorization_code&code=<code>&code_verifier=<verifier>&client_id=<client_id>&client_secret=<client_secret>&redirect_uri=<redirect_uri> ```  #### Client Credentials  Per integrazioni **server-to-server** senza utente interattivo. Disponibile solo per le **app private**, non per quelle pubblicate sul marketplace. Un'app Client Credentials è **legata a una singola azienda** — quella dell'utente che la registra — e il token ne riceve automaticamente il contesto. Per servire un'azienda diversa serve una registrazione separata; se devi distribuire la stessa app a più aziende usa invece **Authorization Code**.  ``` POST {identity-provider}/connect/token Content-Type: application/x-www-form-urlencoded  grant_type=client_credentials&client_id=<client_id>&client_secret=<client_secret>&scope=comune read write documenti ```  > **Importante:** non includere lo scope `openid` (né `profile`/`email`) in questo flusso. `openid` attiva OpenID Connect — richiede un utente che effettua il login e l'emissione di un ID token — cosa che un flusso server-to-server non prevede: la richiesta viene rifiutata con l'errore `Client cannot request OpenID scopes in client credentials flow`. Indica solo gli scope di risorsa (`comune`, `magazzino`, `documenti`, `contabilita`, ed eventualmente `read`/`write`).  In entrambi i casi la risposta contiene l'`access_token` (JWT con `aud: amica-cloud`) da usare nelle chiamate successive finché non scade (`expires_in`), dopodiché va richiesto un nuovo token. Ogni token contiene uno o più **scope** che determinano le aree accessibili (vedi sotto). Dalla [API Reference](https://amica.dev) è possibile incollare un access token per provare gli endpoint direttamente dal browser.  ## Scope di autorizzazione  L'accesso agli endpoint è governato dagli scope presenti nel token OAuth:  | Scope | Descrizione | |-|-| | `comune` | Anagrafiche: contatti, indirizzi, nazioni, valute, modalità di pagamento, ecc. | | `magazzino` | Magazzino: articoli, listini, movimenti di magazzino, giacenze, distinte base. | | `contabilita` | Contabilità: registrazioni contabili, scadenze, castelletti IVA, fatture elettroniche XML. | | `documenti` | Documenti: fatture, note di credito, DDT, ordini, preventivi, proforma ed emissione. |  Una richiesta verso un endpoint non coperto dallo scope del token riceverà una risposta `403 Forbidden`.  ## Company ID  La maggior parte degli endpoint è relativa a una specifica azienda e segue il pattern:  ``` /api/v3/{companyId}/risorsa ```  Il `companyId` è l'identificativo univoco di ciascun database aziendale. Usare l'endpoint `GET /api/v3/config/Azienda` per ottenere l'elenco delle aziende disponibili.  ## Paginazione  Gli endpoint che restituiscono liste supportano la paginazione tramite query parameter:  | Parametro | Descrizione | |-|-| | `Skip` | Numero di elementi da saltare dall'inizio del set di risultati. | | `Take` | Numero di elementi da includere nella risposta. |  La risposta include due header:  | Header | Descrizione | |-|-| | `X-Read-TotalCount` | Numero totale di elementi che soddisfano il filtro corrente. | | `X-Read-Count` | Numero di elementi effettivamente restituiti nel body della risposta. |  ## Ordinamento e filtri  Gli endpoint lista accettano parametri aggiuntivi:  | Parametro | Descrizione | |-|-| | `Order` | Lista di proprietà per l'ordinamento, separate da virgola. Un segno meno (`-`) prima del nome indica ordine discendente. Es. `-RagioneSociale1,Citta`. | | `Filter` | Condizioni di ricerca: lista di espressioni separate da virgola, ciascuna formata da nome campo, operatore, valore ed eventuale connettore logico. Operatori: `$eq`, `$ne`, `$gt`, `$lt`, `$lte`, `$gte`, `$ct` (contiene), `$nct`, `$sw` (inizia con), `$ew` (finisce con). Connettori: `$and` (default, omissibile) e `$or`; le sotto-query si racchiudono tra `[]`. Es. `RagioneSociale1 $ct acme $or, Fido $gt 1000`. | | `SkipTotalCount` | Se `true`, l'header `X-Read-TotalCount` viene omesso dalla risposta: migliori prestazioni a scapito del conteggio totale. Default `false`. |  ## Espansione oggetti correlati  Gli endpoint singoli e lista supportano il parametro `Expand`. Quando fornito, gli oggetti correlati vengono inclusi inline nella risposta anziché restituiti come riferimenti. È possibile specificare espansioni multiple separate da virgola.  ## Gestione errori  L'API usa codici di stato HTTP standard e restituisce [RFC 7807](https://tools.ietf.org/html/rfc7807) Problem Details in caso di errore:  | Codice | Significato | |-|-| | `400` | Bad Request — validazione fallita o parametro obbligatorio mancante. | | `401` | Unauthorized — token mancante o scaduto. | | `403` | Forbidden — accesso negato (vedi sotto le possibili cause). | | `404` | Not Found — la risorsa richiesta non esiste. | | `409` | Conflict — conflitto di concorrenza. | | `422` | Unprocessable Entity — entità non processabile (es. token di concorrenza obsoleto). |  Un `403` può avere tre cause; nelle ultime due il campo `code` della risposta indica quale:  - il token non possiede lo scope richiesto dall'endpoint; - `code: cloud_not_active` — l'account lavora con una connessione locale e la Cloud API non espone i suoi dati. Per attivare il servizio cloud contatta l'assistenza, poi richiedi un nuovo token: lo stato del servizio è letto al rilascio del token; - `code: company_license_not_active` — la licenza dell'azienda indicata nel percorso è scaduta o non è attiva. Le altre aziende con licenza attiva restano accessibili.  Il motivo dell'errore è sempre nel campo `detail`. Ogni risposta di errore riporta inoltre `overridable`: quando vale `true`, l'errore di validazione è *forzabile* e basta ripetere la stessa richiesta aggiungendo `validationOverride=true` alla query string perché il servizio la accetti. È il caso delle anomalie formali su dati reali — la partita IVA di un fornitore estero, per esempio — che il cliente ha comunque bisogno di registrare.  ## Controllo della concorrenza  Le entità contengono una proprietà `ConcurrencyToken`. Quando si aggiorna un'entità tramite `PUT`, il token nel body della richiesta viene confrontato con il valore memorizzato. Se differiscono, viene restituito un `422 Unprocessable Entity`. Usare sempre l'ultimo token ricevuto da una risposta `GET` o `POST`.
  *
- * The version of the OpenAPI document: 3.1.6
+ * The version of the OpenAPI document: 3.2.0
  * Contact: assistenza@gestionaleamica.com
  * Generated by: https://openapi-generator.tech
  * Generator version: 7.11.0
@@ -72,6 +72,11 @@ class MovimentoMerceApi
 
     /** @var string[] $contentTypes **/
     public const contentTypes = [
+        'movimentoMerceComputeRiga' => [
+            'application/json',
+            'text/json',
+            'application/*+json',
+        ],
         'movimentoMerceDelete' => [
             'application/json',
         ],
@@ -85,6 +90,9 @@ class MovimentoMerceApi
             'application/json',
         ],
         'movimentoMerceNewInstance' => [
+            'application/json',
+        ],
+        'movimentoMerceNewInstanceRiga' => [
             'application/json',
         ],
         'movimentoMercePost' => [
@@ -146,21 +154,435 @@ class MovimentoMerceApi
     }
 
     /**
+     * Operation movimentoMerceComputeRiga
+     *
+     * Completa una riga di movimento dopo una modifica e ne calcola prezzi e importi, come il client Windows.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
+     * @param  \Amica\Sdk\Model\MovimentoMerceRigaComputeData|null $movimento_merce_riga_compute_data La riga, i dati della testata e il campo modificato. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['movimentoMerceComputeRiga'] to see the possible values for this operation
+     *
+     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \Amica\Sdk\Model\MovimentoMerceRigaComputeResult|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
+     */
+    public function movimentoMerceComputeRiga($company_id, $idempotency_key = null, $movimento_merce_riga_compute_data = null, string $contentType = self::contentTypes['movimentoMerceComputeRiga'][0])
+    {
+        list($response) = $this->movimentoMerceComputeRigaWithHttpInfo($company_id, $idempotency_key, $movimento_merce_riga_compute_data, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation movimentoMerceComputeRigaWithHttpInfo
+     *
+     * Completa una riga di movimento dopo una modifica e ne calcola prezzi e importi, come il client Windows.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
+     * @param  \Amica\Sdk\Model\MovimentoMerceRigaComputeData|null $movimento_merce_riga_compute_data La riga, i dati della testata e il campo modificato. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['movimentoMerceComputeRiga'] to see the possible values for this operation
+     *
+     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \Amica\Sdk\Model\MovimentoMerceRigaComputeResult|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function movimentoMerceComputeRigaWithHttpInfo($company_id, $idempotency_key = null, $movimento_merce_riga_compute_data = null, string $contentType = self::contentTypes['movimentoMerceComputeRiga'][0])
+    {
+        $request = $this->movimentoMerceComputeRigaRequest($company_id, $idempotency_key, $movimento_merce_riga_compute_data, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    if ('\Amica\Sdk\Model\MovimentoMerceRigaComputeResult' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\MovimentoMerceRigaComputeResult' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\MovimentoMerceRigaComputeResult', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                case 400:
+                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                case 403:
+                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+            }
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            $returnType = '\Amica\Sdk\Model\MovimentoMerceRigaComputeResult';
+            if ($returnType === '\SplFileObject') {
+                $content = $response->getBody(); //stream goes to serializer
+            } else {
+                $content = (string) $response->getBody();
+                if ($returnType !== 'string') {
+                    try {
+                        $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                    } catch (\JsonException $exception) {
+                        throw new ApiException(
+                            sprintf(
+                                'Error JSON decoding server response (%s)',
+                                $request->getUri()
+                            ),
+                            $statusCode,
+                            $response->getHeaders(),
+                            $content
+                        );
+                    }
+                }
+            }
+
+            return [
+                ObjectSerializer::deserialize($content, $returnType, []),
+                $response->getStatusCode(),
+                $response->getHeaders()
+            ];
+
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\MovimentoMerceRigaComputeResult',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+                case 400:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\ProblemDetails',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\ProblemDetails',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation movimentoMerceComputeRigaAsync
+     *
+     * Completa una riga di movimento dopo una modifica e ne calcola prezzi e importi, come il client Windows.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
+     * @param  \Amica\Sdk\Model\MovimentoMerceRigaComputeData|null $movimento_merce_riga_compute_data La riga, i dati della testata e il campo modificato. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['movimentoMerceComputeRiga'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function movimentoMerceComputeRigaAsync($company_id, $idempotency_key = null, $movimento_merce_riga_compute_data = null, string $contentType = self::contentTypes['movimentoMerceComputeRiga'][0])
+    {
+        return $this->movimentoMerceComputeRigaAsyncWithHttpInfo($company_id, $idempotency_key, $movimento_merce_riga_compute_data, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation movimentoMerceComputeRigaAsyncWithHttpInfo
+     *
+     * Completa una riga di movimento dopo una modifica e ne calcola prezzi e importi, come il client Windows.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
+     * @param  \Amica\Sdk\Model\MovimentoMerceRigaComputeData|null $movimento_merce_riga_compute_data La riga, i dati della testata e il campo modificato. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['movimentoMerceComputeRiga'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function movimentoMerceComputeRigaAsyncWithHttpInfo($company_id, $idempotency_key = null, $movimento_merce_riga_compute_data = null, string $contentType = self::contentTypes['movimentoMerceComputeRiga'][0])
+    {
+        $returnType = '\Amica\Sdk\Model\MovimentoMerceRigaComputeResult';
+        $request = $this->movimentoMerceComputeRigaRequest($company_id, $idempotency_key, $movimento_merce_riga_compute_data, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'movimentoMerceComputeRiga'
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string|null $idempotency_key Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. (optional)
+     * @param  \Amica\Sdk\Model\MovimentoMerceRigaComputeData|null $movimento_merce_riga_compute_data La riga, i dati della testata e il campo modificato. (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['movimentoMerceComputeRiga'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function movimentoMerceComputeRigaRequest($company_id, $idempotency_key = null, $movimento_merce_riga_compute_data = null, string $contentType = self::contentTypes['movimentoMerceComputeRiga'][0])
+    {
+
+        // verify the required parameter 'company_id' is set
+        if ($company_id === null || (is_array($company_id) && count($company_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $company_id when calling movimentoMerceComputeRiga'
+            );
+        }
+
+
+
+
+        $resourcePath = '/api/v3/{companyId}/MovimentoMerce/riga/compute';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+        // header params
+        if ($idempotency_key !== null) {
+            $headerParams['Idempotency-Key'] = ObjectSerializer::toHeaderValue($idempotency_key);
+        }
+
+        // path params
+        if ($company_id !== null) {
+            $resourcePath = str_replace(
+                '{' . 'companyId' . '}',
+                ObjectSerializer::toPathValue($company_id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', 'application/problem+json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (isset($movimento_merce_riga_compute_data)) {
+            if (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the body
+                $httpBody = \GuzzleHttp\Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($movimento_merce_riga_compute_data));
+            } else {
+                $httpBody = $movimento_merce_riga_compute_data;
+            }
+        } elseif (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (JWT) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+        // this endpoint requires OAuth (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+        // this endpoint requires OAuth (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
      * Operation movimentoMerceDelete
      *
      * Elimina un elemento.
      *
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID dell&#39;elemento da eliminare. (required)
+     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['movimentoMerceDelete'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return \Amica\Sdk\Model\MovimentoMerce|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails
      */
-    public function movimentoMerceDelete($company_id, $id, string $contentType = self::contentTypes['movimentoMerceDelete'][0])
+    public function movimentoMerceDelete($company_id, $id, $validation_override = null, string $contentType = self::contentTypes['movimentoMerceDelete'][0])
     {
-        list($response) = $this->movimentoMerceDeleteWithHttpInfo($company_id, $id, $contentType);
+        list($response) = $this->movimentoMerceDeleteWithHttpInfo($company_id, $id, $validation_override, $contentType);
         return $response;
     }
 
@@ -171,15 +593,16 @@ class MovimentoMerceApi
      *
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID dell&#39;elemento da eliminare. (required)
+     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['movimentoMerceDelete'] to see the possible values for this operation
      *
      * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of \Amica\Sdk\Model\MovimentoMerce|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
      */
-    public function movimentoMerceDeleteWithHttpInfo($company_id, $id, string $contentType = self::contentTypes['movimentoMerceDelete'][0])
+    public function movimentoMerceDeleteWithHttpInfo($company_id, $id, $validation_override = null, string $contentType = self::contentTypes['movimentoMerceDelete'][0])
     {
-        $request = $this->movimentoMerceDeleteRequest($company_id, $id, $contentType);
+        $request = $this->movimentoMerceDeleteRequest($company_id, $id, $validation_override, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -402,14 +825,15 @@ class MovimentoMerceApi
      *
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID dell&#39;elemento da eliminare. (required)
+     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['movimentoMerceDelete'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function movimentoMerceDeleteAsync($company_id, $id, string $contentType = self::contentTypes['movimentoMerceDelete'][0])
+    public function movimentoMerceDeleteAsync($company_id, $id, $validation_override = null, string $contentType = self::contentTypes['movimentoMerceDelete'][0])
     {
-        return $this->movimentoMerceDeleteAsyncWithHttpInfo($company_id, $id, $contentType)
+        return $this->movimentoMerceDeleteAsyncWithHttpInfo($company_id, $id, $validation_override, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -424,15 +848,16 @@ class MovimentoMerceApi
      *
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID dell&#39;elemento da eliminare. (required)
+     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['movimentoMerceDelete'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function movimentoMerceDeleteAsyncWithHttpInfo($company_id, $id, string $contentType = self::contentTypes['movimentoMerceDelete'][0])
+    public function movimentoMerceDeleteAsyncWithHttpInfo($company_id, $id, $validation_override = null, string $contentType = self::contentTypes['movimentoMerceDelete'][0])
     {
         $returnType = '\Amica\Sdk\Model\MovimentoMerce';
-        $request = $this->movimentoMerceDeleteRequest($company_id, $id, $contentType);
+        $request = $this->movimentoMerceDeleteRequest($company_id, $id, $validation_override, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -475,12 +900,13 @@ class MovimentoMerceApi
      *
      * @param  string $company_id ID univoco dell&#39;azienda. (required)
      * @param  int $id ID dell&#39;elemento da eliminare. (required)
+     * @param  bool|null $validation_override Se applicare eventualmente l&#39;override della validazione. (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['movimentoMerceDelete'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function movimentoMerceDeleteRequest($company_id, $id, string $contentType = self::contentTypes['movimentoMerceDelete'][0])
+    public function movimentoMerceDeleteRequest($company_id, $id, $validation_override = null, string $contentType = self::contentTypes['movimentoMerceDelete'][0])
     {
 
         // verify the required parameter 'company_id' is set
@@ -498,6 +924,7 @@ class MovimentoMerceApi
         }
 
 
+
         $resourcePath = '/api/v3/{companyId}/MovimentoMerce/{id}';
         $formParams = [];
         $queryParams = [];
@@ -505,6 +932,15 @@ class MovimentoMerceApi
         $httpBody = '';
         $multipart = false;
 
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $validation_override,
+            'validationOverride', // param base name
+            'boolean', // openApiType
+            'form', // style
+            true, // explode
+            false // required
+        ) ?? []);
 
 
         // path params
@@ -2278,6 +2714,361 @@ class MovimentoMerceApi
 
 
         $resourcePath = '/api/v3/{companyId}/MovimentoMerce/new';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($company_id !== null) {
+            $resourcePath = str_replace(
+                '{' . 'companyId' . '}',
+                ObjectSerializer::toPathValue($company_id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', 'application/problem+json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (JWT) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+        // this endpoint requires OAuth (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+        // this endpoint requires OAuth (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation movimentoMerceNewInstanceRiga
+     *
+     * Restituisce una nuova riga di movimento, con magazzino e listino predefiniti delle preferenze.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['movimentoMerceNewInstanceRiga'] to see the possible values for this operation
+     *
+     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \Amica\Sdk\Model\MovimentoMerceRiga|\Amica\Sdk\Model\ProblemDetails
+     */
+    public function movimentoMerceNewInstanceRiga($company_id, string $contentType = self::contentTypes['movimentoMerceNewInstanceRiga'][0])
+    {
+        list($response) = $this->movimentoMerceNewInstanceRigaWithHttpInfo($company_id, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation movimentoMerceNewInstanceRigaWithHttpInfo
+     *
+     * Restituisce una nuova riga di movimento, con magazzino e listino predefiniti delle preferenze.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['movimentoMerceNewInstanceRiga'] to see the possible values for this operation
+     *
+     * @throws \Amica\Sdk\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \Amica\Sdk\Model\MovimentoMerceRiga|\Amica\Sdk\Model\ProblemDetails, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function movimentoMerceNewInstanceRigaWithHttpInfo($company_id, string $contentType = self::contentTypes['movimentoMerceNewInstanceRiga'][0])
+    {
+        $request = $this->movimentoMerceNewInstanceRigaRequest($company_id, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    if ('\Amica\Sdk\Model\MovimentoMerceRiga' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\MovimentoMerceRiga' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\MovimentoMerceRiga', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                case 403:
+                    if ('\Amica\Sdk\Model\ProblemDetails' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Amica\Sdk\Model\ProblemDetails' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Amica\Sdk\Model\ProblemDetails', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+            }
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            $returnType = '\Amica\Sdk\Model\MovimentoMerceRiga';
+            if ($returnType === '\SplFileObject') {
+                $content = $response->getBody(); //stream goes to serializer
+            } else {
+                $content = (string) $response->getBody();
+                if ($returnType !== 'string') {
+                    try {
+                        $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                    } catch (\JsonException $exception) {
+                        throw new ApiException(
+                            sprintf(
+                                'Error JSON decoding server response (%s)',
+                                $request->getUri()
+                            ),
+                            $statusCode,
+                            $response->getHeaders(),
+                            $content
+                        );
+                    }
+                }
+            }
+
+            return [
+                ObjectSerializer::deserialize($content, $returnType, []),
+                $response->getStatusCode(),
+                $response->getHeaders()
+            ];
+
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\MovimentoMerceRiga',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Amica\Sdk\Model\ProblemDetails',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation movimentoMerceNewInstanceRigaAsync
+     *
+     * Restituisce una nuova riga di movimento, con magazzino e listino predefiniti delle preferenze.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['movimentoMerceNewInstanceRiga'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function movimentoMerceNewInstanceRigaAsync($company_id, string $contentType = self::contentTypes['movimentoMerceNewInstanceRiga'][0])
+    {
+        return $this->movimentoMerceNewInstanceRigaAsyncWithHttpInfo($company_id, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation movimentoMerceNewInstanceRigaAsyncWithHttpInfo
+     *
+     * Restituisce una nuova riga di movimento, con magazzino e listino predefiniti delle preferenze.
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['movimentoMerceNewInstanceRiga'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function movimentoMerceNewInstanceRigaAsyncWithHttpInfo($company_id, string $contentType = self::contentTypes['movimentoMerceNewInstanceRiga'][0])
+    {
+        $returnType = '\Amica\Sdk\Model\MovimentoMerceRiga';
+        $request = $this->movimentoMerceNewInstanceRigaRequest($company_id, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'movimentoMerceNewInstanceRiga'
+     *
+     * @param  string $company_id ID univoco dell&#39;azienda. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['movimentoMerceNewInstanceRiga'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function movimentoMerceNewInstanceRigaRequest($company_id, string $contentType = self::contentTypes['movimentoMerceNewInstanceRiga'][0])
+    {
+
+        // verify the required parameter 'company_id' is set
+        if ($company_id === null || (is_array($company_id) && count($company_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $company_id when calling movimentoMerceNewInstanceRiga'
+            );
+        }
+
+
+        $resourcePath = '/api/v3/{companyId}/MovimentoMerce/riga/new';
         $formParams = [];
         $queryParams = [];
         $headerParams = [];
