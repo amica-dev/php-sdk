@@ -4,6 +4,7 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 
 | Method | HTTP request | Description |
 | ------------- | ------------- | ------------- |
+| [**listinoCompute()**](ListinoApi.md#listinoCompute) | **POST** /api/v3/{companyId}/Listino/compute | Esegue una procedura sulle righe di un listino, come il client Windows, senza salvare nulla. |
 | [**listinoDelete()**](ListinoApi.md#listinoDelete) | **DELETE** /api/v3/{companyId}/Listino/{id} | Elimina un elemento. |
 | [**listinoGet()**](ListinoApi.md#listinoGet) | **GET** /api/v3/{companyId}/Listino/{id} | Restituisce un elemento. |
 | [**listinoList()**](ListinoApi.md#listinoList) | **GET** /api/v3/{companyId}/Listino | Restituisce una lista di elementi. |
@@ -11,6 +12,76 @@ All URIs are relative to http://localhost, except if the operation defines anoth
 | [**listinoPost()**](ListinoApi.md#listinoPost) | **POST** /api/v3/{companyId}/Listino | Salva un nuovo elemento. |
 | [**listinoPut()**](ListinoApi.md#listinoPut) | **PUT** /api/v3/{companyId}/Listino/{id} | Aggiorna un elemento esistente. |
 
+
+## `listinoCompute()`
+
+```php
+listinoCompute($company_id, $idempotency_key, $listino_compute_data): \Amica\Sdk\Model\ListinoComputeResult
+```
+
+Esegue una procedura sulle righe di un listino, come il client Windows, senza salvare nulla.
+
+Il listino può essere nuovo o avere modifiche non salvate: le procedure lavorano sulle righe ricevute. Va valorizzato solo il gruppo di parametri della procedura scelta in `procedura`:              - `Aggiungi`: una riga per ogni articolo attivo non ancora nel listino, con il solo articolo e il resto a   zero, prezzo compreso. Gli articoli sono tutti, quelli del produttore, della marca, della categoria o del   gruppo merceologico indicato in `id`, o quelli inseriti dal giorno `dal` in poi. Mai prestazioni. - `Duplica`: le righe articolo del listino `listinoId`, clienti o fornitori, per gli articoli non   ancora presenti, con prezzo, sconti, ricarico e provvigioni. Le righe di prestazione non si copiano. - `ModificaPrezzi`: aumenta o diminuisce il prezzo di ogni riga di una `percentuale`, con il   risultato arrotondato ai decimali dei prezzi unitari delle preferenze, o di un `importo` fisso, senza   arrotondamento. Va indicato uno solo dei due. - `Sconti`: i quattro sconti su ogni riga. - `Provvigioni`: le provvigioni di agente e capo area su ogni riga.              Percentuali, sconti e provvigioni sono frazioni: `0.05` corrisponde al 5%. Le righe nuove hanno Id 0. Per salvare il risultato si invia il listino con `POST` o `PUT`. Il listino non si valida: può essere ancora senza nome.
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer (JWT) authorization: bearer
+$config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+// Configure OAuth2 access token for authorization: oauth2ClientCredentials
+$config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+// Configure OAuth2 access token for authorization: oauth2
+$config = Amica\Sdk\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Amica\Sdk\Api\ListinoApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$company_id = 'company_id_example'; // string | ID univoco dell'azienda.
+$idempotency_key = 'idempotency_key_example'; // string | Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l'operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l'header `Idempotent-Replayed: true`.
+$listino_compute_data = new \Amica\Sdk\Model\ListinoComputeData(); // \Amica\Sdk\Model\ListinoComputeData | Il listino aperto con le sue righe attuali, la procedura e i suoi parametri.
+
+try {
+    $result = $apiInstance->listinoCompute($company_id, $idempotency_key, $listino_compute_data);
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling ListinoApi->listinoCompute: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **company_id** | **string**| ID univoco dell&#39;azienda. | |
+| **idempotency_key** | **string**| Chiave di idempotenza (opzionale). Inviando la stessa chiave su un retry si riottiene la risposta della prima richiesta senza rieseguire l&#39;operazione: rende sicuri i retry automatici. Usa un valore univoco per operazione logica (es. un UUID). La risposta replicata riporta l&#39;header &#x60;Idempotent-Replayed: true&#x60;. | [optional] |
+| **listino_compute_data** | [**\Amica\Sdk\Model\ListinoComputeData**](../Model/ListinoComputeData.md)| Il listino aperto con le sue righe attuali, la procedura e i suoi parametri. | [optional] |
+
+### Return type
+
+[**\Amica\Sdk\Model\ListinoComputeResult**](../Model/ListinoComputeResult.md)
+
+### Authorization
+
+[bearer](../../README.md#bearer), [oauth2ClientCredentials](../../README.md#oauth2ClientCredentials), [oauth2](../../README.md#oauth2)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`, `text/json`, `application/*+json`
+- **Accept**: `application/json`, `application/problem+json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
 
 ## `listinoDelete()`
 
